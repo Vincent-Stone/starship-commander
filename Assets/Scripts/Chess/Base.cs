@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using ActionType = Player.ActionType;
 
 public class Base : Chess
 {
@@ -20,6 +21,7 @@ public class Base : Chess
         hitPoints = maxHitPoints;
         canBeForcedMoved = false;
         value = 100;
+        actionTypeList = new List<ActionType>() { ActionType.Move };
         if (dataPanel == null)
         {
             dataPanel = FindFirstObjectByType<UI_DataPanel>();
@@ -43,6 +45,22 @@ public class Base : Chess
     }
     public override void Act()
     {
+    }
+    public void A_Move(int dx,int dy,int actionPoints)
+    {
+        Vector3 startPosition = transform.position;
+        Vector3 endPosition = transform.position + new Vector3(dx, dy, 0);
+        Chess target = ChessBoard.instance[y + dy, x + dx];
+        if (ChessBoard.instance[y, x] == this)
+            ChessBoard.instance[y, x] = null;
+        x += dx;
+        y += dy;
+        transform.position = endPosition;
+        ChessBoard.instance[y, x] = this;
+        if (actionPoints > 0)
+            ShowRange();
+        isActing = false;
+        ChessManager.instance.UpdateChessList();
     }
     public override void TakeDamage(int damage, Chess attacker = null, Vector2Int attackDirection = new Vector2Int())
     {
@@ -90,7 +108,24 @@ public class Base : Chess
 
     public override List<Vector2Int> GetMoveRange()
     {
-        return new List<Vector2Int>();
+        List<Vector2Int> rangeList = new List<Vector2Int>();
+        bool canMoveUp = true;
+        for (int i = y + 1; i < ChessBoard.instance.rowNum; i++)
+        {
+            for(int j = 0; j < ChessBoard.instance.colNum; j++)
+            {
+                if(ChessBoard.instance[i, j] != null)
+                {
+                    canMoveUp = false; 
+                    break;
+                }
+            }
+            if(canMoveUp)
+                rangeList.Add(new Vector2Int(x, i));
+            else
+                break;
+        }
+        return rangeList;
     }
     public override List<Vector2Int> GetAttackRange()
     {

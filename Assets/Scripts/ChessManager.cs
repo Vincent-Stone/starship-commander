@@ -37,6 +37,7 @@ public class ChessManager : MonoBehaviour
     [Header("ป๙ตุ")]
     [SerializeField] Base baseChess;
     public Vector2Int basePosition { get { return new Vector2Int(baseChess.x, baseChess.y); } }
+    int highestRow = 9;
     [SerializeField] UI_Cursor cursor;
     //[SerializeField] UI_AdjustPanels adjustPanels;
     [SerializeField] string testMassage;
@@ -115,7 +116,10 @@ public class ChessManager : MonoBehaviour
                 {
                     chess.x = j;
                     chess.y = i;
-                    chessList.Add(chess);
+                    if (i <= highestRow)
+                    {
+                        chessList.Add(chess);
+                    }
                     chessBoard[i, j] = chess;
                     chess.name = chessType.ToString() + (chessList.Count - 1).ToString();
                     chess.transform.position = ChessBoard.tilemap.GetCellCenterWorld(new Vector3Int(j, i, 0));
@@ -139,7 +143,34 @@ public class ChessManager : MonoBehaviour
             player.PlayerTurnStart();
         }
     }
-
+    public void UpdateChessList()
+    {
+        for (int i = 0; i < chessList.Count; i++)
+        {
+            Chess chess = chessList[i];
+            if (chess.gameObject.activeSelf == false)
+            {
+                chessList.Remove(chess);
+                i--;
+            }
+        }
+        int newHighestRow = Mathf.Min(basePosition.y + 9, ChessBoard.instance.rowNum);
+        if (newHighestRow > highestRow)
+        {
+            for(int i = highestRow + 1; i <= newHighestRow; i++)
+            {
+                for(int j = 0; j < ChessBoard.instance.colNum; j++)
+                {
+                    Chess chess = chessBoard[i, j];
+                    if (chess != null)
+                    {
+                        chessList.Add(chess);
+                    }
+                }
+            }
+            highestRow = newHighestRow;
+        }
+    }
     public void PushActingChess(Chess actingChess)
     {
         actingChess.isActing = true;

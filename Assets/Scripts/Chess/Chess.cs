@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using ActionType = Player.ActionType;
 
 public abstract class Chess : MonoBehaviour , IDamageable
 {
@@ -28,6 +29,8 @@ public abstract class Chess : MonoBehaviour , IDamageable
     [SerializeField] internal Vector2Int axisForce;
     internal int frozenTurns = 0;
     public Chess rider = null;
+    internal List<ActionType> actionTypeList = new List<ActionType>() { ActionType.Move, ActionType.Ride, ActionType.Punch, ActionType.Shoot };
+    internal int actionTypeIndex = 0;
     public abstract void Act();
     public void InitRangeSprites()
     {
