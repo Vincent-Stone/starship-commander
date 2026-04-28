@@ -3781,7 +3781,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a687ea430466434aa63669f3a93ccb4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gameState: 0
+  chessList: []
   boardSize: {x: 9, y: 20}
   mousePosition: {x: 0, y: 0, z: 0}
   cellPosition: {x: 0, y: 0, z: 0}
@@ -4605,7 +4605,7 @@ MonoBehaviour:
   actionType: 0
   baseChess: {fileID: 0}
   isDead: 1
-  maxActionPoints: 4
+  maxActionPoints: 2
   actionPoints: 0
   moveRangeList: []
   attackRangeList: []

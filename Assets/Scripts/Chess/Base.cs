@@ -92,4 +92,8 @@ public class Base : Chess
     {
         return new List<Vector2Int>();
     }
+    public override List<Vector2Int> GetAttackRange()
+    {
+        return new List<Vector2Int>();
+    }
 }

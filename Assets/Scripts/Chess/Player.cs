@@ -94,7 +94,8 @@ public class Player : Chess
         else
             actionType = weapon.actionMode[actionIndex - 2];
         actionTypeName.text = actionType.ToString();
-        ShowRange();
+        if(selectedChess != null)
+            selectedChess.ShowRange();
     }
     public void SetActionType( int type)
     {
@@ -159,6 +160,11 @@ public class Player : Chess
         {
             isInPlayerTurn = false;
         }
+        if(selectedChess != null)
+        {
+            selectedChess.HideRange();
+            SetSelectedChess(null);
+        }
         ChessManager.instance.EnemyTurnStart();
     }
     IEnumerator PlayerTurnUpdate()
@@ -170,6 +176,12 @@ public class Player : Chess
             if (Input.GetMouseButtonDown(0) && !ChessManager.instance.haveActingChess() && !isActing)
             {
                 OnClicked();
+            }
+            while (ChessManager.instance.haveActingChess())
+            {
+                while (ChessManager.instance.haveActingChess() && !ChessManager.instance.PeekActingChess().isActing)
+                    ChessManager.instance.PopActingChess();
+                yield return null;
             }
             yield return null;
         }
@@ -229,34 +241,37 @@ public class Player : Chess
             }
             return;
         }
-        if (selectedChess.camp == 0)
+        if (ChessBoard.IsOnBoard(mouseCellPosition.x, mouseCellPosition.y))
         {
-            if (ChessBoard.IsOnBoard(mouseCellPosition.x, mouseCellPosition.y))
+            Chess chessClickedOn = ChessBoard.instance[mouseCellPosition.y, mouseCellPosition.x];
+            Debug.Log("点击");
+            if (selectedChess.IsInRange(mouseCellPosition) && selectedChess.camp == this.camp)
             {
-                Chess chessClickedOn = ChessBoard.instance[mouseCellPosition.y, mouseCellPosition.x];
-                //Debug.Log("点击");
-                if (selectedChess.IsInRange(mouseCellPosition))
+                if (actionType == ActionType.Move && cellPosition != mouseCellPosition)
                 {
-                    if(actionType == ActionType.Move && cellPosition != mouseCellPosition)
+                    if (selectedChess == this)
                     {
-                        if(selectedChess == this)
-                        {
-                            //Debug.Log("移动");
-                            //isActing = true;
-                            ConsumeActionPoints();
-                            ChessManager.instance.PushActingChess(this);
-                            StartCoroutine(Move(mouseCellPosition.x - x, mouseCellPosition.y - y));
-                        }
-                    }
-                    else
-                    {
-
+                        //Debug.Log("移动");
+                        //isActing = true;
+                        ConsumeActionPoints();
+                        ChessManager.instance.PushActingChess(this);
+                        A_Move(mouseCellPosition.x - x, mouseCellPosition.y - y);
                     }
                 }
-                else if (chessClickedOn != null)
+                else if (actionType == ActionType.Punch)
                 {
-                    SetSelectedChess(chessClickedOn);
+                    if (chessClickedOn != null && chessClickedOn.camp != camp)
+                    {
+                        //Debug.Log("攻击");
+                        ConsumeActionPoints();
+                        ChessManager.instance.PushActingChess(this);
+                        A_Punch(mouseCellPosition.x - x, mouseCellPosition.y - y);
+                    }
                 }
+            }
+            else if (chessClickedOn != null)
+            {
+                SetSelectedChess(chessClickedOn);
             }
         }
     }
@@ -319,9 +334,24 @@ public class Player : Chess
             rangeList.Add(new Vector2Int(x, y + 1));
         return rangeList;
     }
-    public List<Vector2Int> GetAttackRange()
+    public override List<Vector2Int> GetAttackRange()
     {
-        return GetMoveRange();
+        List<Vector2Int> rangeList = new List<Vector2Int>();
+        if (rideOn != null && rideOn.canBeRiden)
+        {
+            rangeList = rideOn.GetAttackRange();
+            if (rangeList.Count > 0)
+                return rangeList;
+        }
+        if (y > 0)
+            rangeList.Add(new Vector2Int(x, y - 1));
+        if (x > 0)
+            rangeList.Add(new Vector2Int(x - 1, y));
+        if (x < ChessBoard.instance.colNum - 1)
+            rangeList.Add(new Vector2Int(x + 1, y));
+        if (y < ChessBoard.instance.rowNum - 1)
+            rangeList.Add(new Vector2Int(x, y + 1));
+        return rangeList;
     }
     public List<Vector2Int> GetRideRange()
     {
@@ -338,9 +368,7 @@ public class Player : Chess
         return GetShootRange();
     }
 
-
-
-    public IEnumerator Move(int dx,int dy)
+    public void A_Move(int dx,int dy)
     {
         Vector3 startPosition = transform.position;
         Vector3 endPosition = transform.position + new Vector3(dx, dy, 0);
@@ -379,12 +407,22 @@ public class Player : Chess
             //else if (target == baseChess)
             //    SetRideOn(target);
         }
-        yield return null;
-        ChessManager.instance.PopActingChess(this);
+        //yield return null;
         if (actionPoints > 0)
             ShowRange();
+        isActing = false;
     }
-
+    public void A_Punch(int dx, int dy)
+    {
+        Chess target = ChessBoard.instance[y + dy, x + dx];
+        if (target != null && target.camp != camp)
+        {
+            target.TakeDamage(10, this, new Vector2Int(dx, dy));
+        }
+        if (actionPoints > 0)
+            ShowRange();
+        isActing = false;
+    }
     public IEnumerator Shoot(int targetX, int targetY)
     {
         Debug.Log("Player Shoot");
@@ -404,11 +442,6 @@ public class Player : Chess
     {
         if(!isDead)
             isDead = true;
-        /*if (attacker != null)
-        {
-            ChessBoard.instance[this.y, this.x] = this;
-            attacker.TakeDamage(10, this);
-        }*/
         isActing = true;
         ChessManager.instance.PushActingChess(this);
         StartCoroutine(Damaged());

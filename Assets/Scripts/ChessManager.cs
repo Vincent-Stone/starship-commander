@@ -15,13 +15,14 @@ public class ChessManager : MonoBehaviour
         Left,
         Right
     }
-    public enum GameState
-    {
-        MainPhase,
-        BattlePhase
-    }
-    public GameState gameState = GameState.MainPhase;
-    List<Chess> chessList;
+    //public enum GameState
+    //{
+    //    MainPhase,
+    //    BattlePhase
+    //}
+    //public GameState gameState = GameState.MainPhase;
+    [SerializeField] List<Chess> chessList;
+    List<Chess> chessPrepareToActList;
     Stack<Chess> actingChessStack;
     [Header("∆Â≈Ã")]
     [SerializeField] Vector2Int boardSize = new Vector2Int(9, 10);
@@ -144,7 +145,25 @@ public class ChessManager : MonoBehaviour
         actingChess.isActing = true;
         actingChessStack.Push(actingChess);
     }
-    public void PopActingChess(Chess actingChess)
+    public void PopActingChess()
+    {
+        if (actingChessStack.Count == 0)
+        {
+            Debug.LogError("Trying to pop from an empty acting chess stack.");
+            return;
+        }
+        Chess actingChess = actingChessStack.Pop();
+    }
+    public Chess PeekActingChess()
+    {
+        if (actingChessStack.Count == 0)
+        {
+            Debug.LogError("Trying to peek from an empty acting chess stack.");
+            return null;
+        }
+        return actingChessStack.Peek();
+    }
+    void PopActingChess(Chess actingChess)
     {
         if (actingChessStack.Count == 0)
         {
@@ -168,9 +187,37 @@ public class ChessManager : MonoBehaviour
 
     public void EnemyTurnStart()
     {
-
+        chessPrepareToActList = new List<Chess>();
+        for(int i=0;i<chessList.Count;i++)
+        {
+            Chess chess = chessList[i];
+            if (chess.gameObject.activeSelf == true)
+            {
+                chessPrepareToActList.Add(chess);
+            }
+            else
+            {
+                chessList.Remove(chess);
+                i--;
+            }
+        }
+        StartCoroutine(EnemyTurnUpdate());
     }
- 
+    IEnumerator EnemyTurnUpdate()
+    {
+        foreach (Chess chess in chessPrepareToActList)
+        {
+            PushActingChess(chess);
+            chess.Act();
+            while (haveActingChess())
+            {
+                while(haveActingChess() && !PeekActingChess().isActing)
+                    PopActingChess();
+                yield return null;
+            }
+        }
+        player.PlayerTurnStart();
+    }
     //void MainPhaseUpdate()
     //{
     //    if (player.actionType != lastActionType)

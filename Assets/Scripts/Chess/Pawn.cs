@@ -18,7 +18,7 @@ public class Pawn : Chess
             isActing = false;
             return;
         }
-        //Debug.Log("Pawn Move");
+        //Debug.Log("Pawn A_Move");
         if (ChessBoard.instance != null)
         {
             if (this.y > (ChessBoard.instance.rowNum - 1) / 2)
@@ -74,9 +74,9 @@ public class Pawn : Chess
     //    return false;
     //}
 
-    //IEnumerator Move(int dx, int dy)
+    //IEnumerator A_Move(int dx, int dy)
     //{
-    //    //Debug.Log("Pawn Move");
+    //    //Debug.Log("Pawn A_Move");
     //    Vector3 startPosition = transform.position;
     //    Vector3 endPosition = transform.position + new Vector3(dx, dy);
 
@@ -103,6 +103,7 @@ public class Pawn : Chess
     public override List<Vector2Int> GetMoveRange()
     {
         List<Vector2Int> rangeList = new List<Vector2Int>();
+        return rangeList;
         if (y > 0)
             rangeList.Add(new Vector2Int(x, y - 1));
         if (x > 0)
@@ -111,9 +112,11 @@ public class Pawn : Chess
             rangeList.Add(new Vector2Int(x + 1, y));
         if (y < ChessBoard.instance.rowNum - 1)
             rangeList.Add(new Vector2Int(x, y + 1));
-        return rangeList;
     }
-
+    public override List<Vector2Int> GetAttackRange()
+    {
+        throw new System.NotImplementedException();
+    }
     //public void TakeDamage(int damage, Chess attacker = null, Vector2Int attackDirection = new Vector2Int())
     //{
     //    if (ChessBoard.instance[this.y, this.x] == this)

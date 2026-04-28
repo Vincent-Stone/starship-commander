@@ -93,11 +93,13 @@ public abstract class Chess : MonoBehaviour , IDamageable
     }
 
     public abstract List<Vector2Int> GetMoveRange();
+    public abstract List<Vector2Int> GetAttackRange();
     public virtual void TakeDamage(int damage, Chess attacker = null, Vector2Int attackDirection = new Vector2Int())
     {
         if (ChessBoard.instance[this.y, this.x] == this)
             ChessBoard.instance[this.y, this.x] = null;
         Debug.Log("Damaged! attacker = " + attacker);
+        isActing = false;
         this.gameObject.SetActive(false);
     }
     public void Freeze(int duration)

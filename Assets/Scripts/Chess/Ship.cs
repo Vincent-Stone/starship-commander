@@ -81,7 +81,10 @@ public abstract class Ship : Chess
             return GetMoveRange(x, y, out attackPointsCount, rider);
         return GetMoveRange(x, y, out attackPointsCount, this);
     }
-
+    public override List<Vector2Int> GetAttackRange()
+    {
+        throw new System.NotImplementedException();
+    }
     internal bool CanMoveTo(int targetX, int targetY, Chess thisChess)
     {
         if (ChessBoard.IsOnBoard(targetX, targetY) && (ChessBoard.instance[targetY, targetX] == null
