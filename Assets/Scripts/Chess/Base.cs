@@ -6,11 +6,12 @@ using ActionType = Player.ActionType;
 
 public class Base : Chess
 {
-    int shieldsNum = 0;
+    [SerializeField] int shieldsNum = 0;
     int hitPoints = 0;
     [SerializeField] int maxShieldsNum = 10;
     [SerializeField] int maxHitPoints = 10;
     [SerializeField] UI_DataPanel dataPanel;
+    [SerializeField] int baseValue = 100;
     public void InitBaseAndPlayer()
     {
         camp = 0;
@@ -20,7 +21,7 @@ public class Base : Chess
         shieldsNum = maxShieldsNum;
         hitPoints = maxHitPoints;
         canBeForcedMoved = false;
-        value = 100;
+        value = baseValue;
         actionTypeList = new List<ActionType>() { ActionType.Move };
         if (dataPanel == null)
         {
@@ -68,24 +69,23 @@ public class Base : Chess
         {
             shieldsNum--;
             //dataPanel.UpdateSlider(UI_DataPanel.SliderType.BaseShield, shieldsNum / (float)maxShieldsNum);
-            if (attacker)
-            {
-                ChessBoard.instance[y, x] = this;
-                attacker.AddForce(-attackDirection);
-                attacker.isActing = true;
-                ChessManager.instance.PushActingChess(attacker);
-                attacker.ForcedMove();
-            }
+            //if (attacker)
+            //{
+            //    ChessBoard.instance[y, x] = this;
+            //    attacker.AddForce(-attackDirection);
+            //    attacker.isActing = true;
+            //    ChessManager.instance.PushActingChess(attacker);
+            //    attacker.ForcedMove();
+            //}
             return;
         }
         hitPoints -= damage;
         dataPanel.UpdateSlider(UI_DataPanel.SliderType.BaseHp, hitPoints / (float)maxHitPoints);
-        if (attacker != null)
-        {
-            ChessBoard.instance[this.y, this.x] = this;
-            attacker.TakeDamage(10, this);
-        }
-        isActing = true;
+        //if (attacker != null)
+        //{
+        //    ChessBoard.instance[this.y, this.x] = this;
+        //    attacker.TakeDamage(10, this);
+        //}
         ChessManager.instance.PushActingChess(this);
         StartCoroutine(Damaged());
         if (hitPoints <= 0)
@@ -110,18 +110,21 @@ public class Base : Chess
     {
         List<Vector2Int> rangeList = new List<Vector2Int>();
         bool canMoveUp = true;
-        for (int i = y + 1; i < ChessBoard.instance.rowNum; i++)
+        for (int i = y; i < ChessBoard.instance.rowNum; i++)
         {
             for(int j = 0; j < ChessBoard.instance.colNum; j++)
             {
-                if(ChessBoard.instance[i, j] != null)
+                if(ChessBoard.instance[i, j] != null && ChessBoard.instance[i, j] != this)   
                 {
                     canMoveUp = false; 
                     break;
                 }
             }
-            if(canMoveUp)
-                rangeList.Add(new Vector2Int(x, i));
+            if (canMoveUp)
+            {
+                if (i != y)
+                    rangeList.Add(new Vector2Int(x, i));
+            }
             else
                 break;
         }

@@ -42,6 +42,7 @@ public class Player : Chess
     [Header("数值")]
     [SerializeField] int maxActionPoints = 2;
     [SerializeField] int actionPoints = 0;
+    [SerializeField] int playerValue = 10;
     [Header("范围")]
     [SerializeField] List<Vector2Int> moveRangeList;
     [SerializeField] List<Vector2Int> attackRangeList;
@@ -52,10 +53,12 @@ public class Player : Chess
     [SerializeField] Camera sceneCamera;
     public Vector3 mouseWorldPosition;
     public Vector2Int mouseCellPosition;
+    Vector2Int lastMouseCellPosition;
     public Chess selectedChess = null;
     public void InitPlayer()
     {
         actionTypeName.text = defaultActionTypeName;
+        shootArrowTransform.gameObject.SetActive(false);
         //hitPoints = maxHitPoints;
         if (dataPanel == null)
         {
@@ -69,7 +72,7 @@ public class Player : Chess
         //    Debug.LogError("Shoot arrow is null!");
         //dataPanel.UpdateSlider(UI_DataPanel.SliderType.Hp, 1);
         camp = 0;
-        value = 10;
+        value = playerValue;
         bullet.gameObject.SetActive(false);
         //if(baseChess != null)
         //    rideOnName.text = baseChess.chessTypeName;
@@ -101,6 +104,14 @@ public class Player : Chess
             }
             actionTypeName.text = actionType.ToString();
             selectedChess.ShowRange();
+            if (actionType == ActionType.Shoot)
+            {
+                shootArrowTransform.gameObject.SetActive(true);
+            }
+            else
+            {
+                shootArrowTransform.gameObject.SetActive(false);
+            }
             return;
         }
         actionTypeName.text = defaultActionTypeName;
@@ -131,12 +142,8 @@ public class Player : Chess
 
     public override void Act()
     {
-        isActing = true;
-        //Debug.Log("Player Act");
-        switch(actionType)
-        {
-
-        }
+        isActing = false;
+        //Debug.Log("玩家的活动状态为：" + isActing);
     }
 
     void ConsumeActionPoints()
@@ -165,16 +172,17 @@ public class Player : Chess
     }
     public void PlayTurnEnd()
     {
-        if(isInPlayerTurn)
+        if (isInPlayerTurn)
         {
             isInPlayerTurn = false;
+
+            if (selectedChess != null)
+            {
+                ChessBoard.instance.HideRange();
+                SetSelectedChess(null);
+            }
+            ChessManager.instance.EnemyTurnStart();
         }
-        if(selectedChess != null)
-        {
-            selectedChess.HideRange();
-            SetSelectedChess(null);
-        }
-        ChessManager.instance.EnemyTurnStart();
     }
     IEnumerator PlayerTurnUpdate()
     {
@@ -182,6 +190,11 @@ public class Player : Chess
         {
             mouseWorldPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             mouseCellPosition = ChessBoard.GetCell(mouseWorldPosition);
+            if(lastMouseCellPosition != mouseCellPosition)
+            {
+                lastMouseCellPosition = mouseCellPosition;
+                OnUpdateMouseCellPosition();
+            }
             if (Input.GetMouseButtonDown(0) && !ChessManager.instance.haveActingChess() && !isActing)
             {
                 OnClicked();
@@ -225,15 +238,11 @@ public class Player : Chess
     }
 
     void OnUpdateMouseCellPosition()
-    {/*
-        //cursor.MoveTo(GetCellCenterWorld((Vector2Int)cellPosition));
-        if (ChessBoard.IsOnBoard(cellPosition.x, cellPosition.y))
+    {
+        if(actionType == ActionType.Shoot && ChessBoard.IsInView(mouseCellPosition.x, mouseCellPosition.y))
         {
-            Chess chess = chessBoard[cellPosition.y, cellPosition.x];
-            //adjustPanels.UpdateInfoPanel(chess);
-            select = chess;
+            shootArrowTransform.up = (Vector2)(mouseCellPosition - cellPosition);
         }
-    */
     }
 
     void OnClicked()
@@ -250,7 +259,7 @@ public class Player : Chess
             }
             return;
         }
-        if (ChessBoard.IsOnBoard(mouseCellPosition.x, mouseCellPosition.y))
+        if (ChessBoard.IsInView(mouseCellPosition.x, mouseCellPosition.y))
         {
             Chess chessClickedOn = ChessBoard.instance[mouseCellPosition.y, mouseCellPosition.x];
             Debug.Log("点击");
@@ -264,7 +273,8 @@ public class Player : Chess
                         ConsumeActionPoints();
                         ChessManager.instance.PushActingChess(this);
                         A_Move(mouseCellPosition.x - x, mouseCellPosition.y - y);
-                    }else if(selectedChess == baseChess)
+                    }
+                    else if (selectedChess == baseChess)
                     {
                         //Debug.Log("移动");
                         ConsumeActionPoints();
@@ -285,7 +295,7 @@ public class Player : Chess
                 }
                 else if (actionType == ActionType.Ride)
                 {
-                    if (chessClickedOn != null && chessClickedOn.canBeRiden)
+                    if (chessClickedOn == null || chessClickedOn.canBeRiden)
                     {
                         //Debug.Log("骑乘");
                         ConsumeActionPoints();
@@ -293,6 +303,13 @@ public class Player : Chess
                         A_Ride(mouseCellPosition.x - x, mouseCellPosition.y - y);
                     }
                 }
+            }
+            else if(actionType == ActionType.Shoot)
+            {
+                //Debug.Log("射击");
+                ConsumeActionPoints();
+                ChessManager.instance.PushActingChess(this);
+                StartCoroutine(Shoot(mouseCellPosition.x - x, mouseCellPosition.y - y));
             }
             else
             {
@@ -303,7 +320,7 @@ public class Player : Chess
     void SetSelectedChess(Chess selected)
     {
         if(selectedChess != null)
-            selectedChess.HideRange();
+            ChessBoard.instance.HideRange();
         selectedChess = selected;
         if (selected != null)
         {
@@ -316,38 +333,37 @@ public class Player : Chess
             actionTypeName.text = defaultActionTypeName;
         }
     }
-    Player.ActionType lastActionType = Player.ActionType.Move;
-    void OnChangePlayerActionType()
-    {
-        lastActionType = actionType;
-        ShowRange();
-        switch (actionType)
-        {
-            case Player.ActionType.Shoot:
-                shootArrowTransform.gameObject.SetActive(true);
-                break;
-            case Player.ActionType.Ride:
-            default:
-                shootArrowTransform.gameObject.SetActive(false);
-                break;
-        }
-    }
+    //Player.ActionType lastActionType = Player.ActionType.Move;
+    //void OnChangePlayerActionType()
+    //{
+    //    lastActionType = actionType;
+    //    ShowRange();
+    //    switch (actionType)
+    //    {
+    //        case Player.ActionType.Shoot:
+    //            shootArrowTransform.gameObject.SetActive(true);
+    //            break;
+    //        case Player.ActionType.Ride:
+    //        default:
+    //            shootArrowTransform.gameObject.SetActive(false);
+    //            break;
+    //    }
+    //}
 
 
 
 
     public override void ShowRange()
     {
-        if(rangeSprites == null)
-            InitRangeSprites();
+        ChessBoard.instance.HideRange();
         if (actionType == ActionType.Move)
-            ShowRange(GetMoveRange(), moveRangeColor);
+            ChessBoard.instance.ShowRange(GetMoveRange(), moveRangeColor, true);
         else if (actionType == ActionType.Punch)
-            ShowRange(GetAttackRange(), attackRangeColor);
+            ChessBoard.instance.ShowRange(GetAttackRange(), attackRangeColor, false);
         else if (actionType == ActionType.Ride)
-            ShowRange(GetRideRange(), rideRangeColor);
+            ChessBoard.instance.ShowRange(GetRideRange(), rideRangeColor, false);
         else
-            HideRange();
+            ChessBoard.instance.HideRange();
     }
 
     public override List<Vector2Int> GetMoveRange()
@@ -411,7 +427,12 @@ public class Player : Chess
     {
         return GetShootRange();
     }
-
+    public void A_ActEnd()
+    {
+        if (actionPoints > 0)
+            ShowRange();
+        isActing = false;
+    }
     public void A_Move(int dx,int dy)
     {
         Vector3 startPosition = transform.position;
@@ -437,10 +458,12 @@ public class Player : Chess
             SetRideOn(baseChess);
         }
         ChessBoard.instance[y,x] = this;
-        if (actionPoints > 0)
-            ShowRange();
-        isActing = false;
+        A_ActEnd();
+        //if (actionPoints > 0)
+        //    ShowRange();
+        //isActing = false;
     }
+    
     public void A_Punch(int dx, int dy)
     {
         Chess target = ChessBoard.instance[y + dy, x + dx];
@@ -448,10 +471,9 @@ public class Player : Chess
         {
             target.TakeDamage(10, this, new Vector2Int(dx, dy));
         }
-        if (actionPoints > 0)
-            ShowRange();
-        isActing = false;
+        A_ActEnd();
     }
+
     public void A_Ride(int dx, int dy)
     {
         Chess target = ChessBoard.instance[y + dy, x + dx];
@@ -470,7 +492,7 @@ public class Player : Chess
             if (ChessBoard.instance[y, x] == this)
                 ChessBoard.instance[y, x] = null;
         }
-            x += dx;
+        x += dx;
         y += dy;
         ChessBoard.instance[y, x] = this;
         transform.position = endPosition;
@@ -478,9 +500,7 @@ public class Player : Chess
         {
             SetRideOn(target);
         }
-        if (actionPoints > 0)
-            ShowRange();
-        isActing = false;
+        A_ActEnd();
     }
     public IEnumerator Shoot(int targetX, int targetY)
     {

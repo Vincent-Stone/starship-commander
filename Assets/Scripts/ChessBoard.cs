@@ -10,8 +10,14 @@ public class ChessBoard
     static Chess [,] chessBoard = null;
     public int rowNum = 0;
     public int colNum = 0;
+    public Transform moveRangeParent = null;
+    public Transform attackRangeParent = null;
     public GameObject rangePrefab = null;
+    public GameObject attackRangePrefab = null;
+    public GameObject moveRangePrefab = null;
     SpriteRenderer[,] rangeSprites = null;
+    SpriteRenderer[,] attackRangeSprites = null;
+    SpriteRenderer[,] moveRangeSprites = null;
     public static ChessBoard instance = null;
     public ChessManager chessManager = null;
     public static Tilemap tilemap;
@@ -29,29 +35,103 @@ public class ChessBoard
         }
         this.chessManager = chessManager;
         this.rangePrefab = Resources.Load("Prefabs/Range") as GameObject;
+        this.attackRangePrefab = Resources.Load("Prefabs/AttackRange") as GameObject;
+        this.moveRangePrefab = Resources.Load("Prefabs/MoveRange") as GameObject;
         this.rowNum = rowNum;
         this.colNum = colNum;
         chessBoard = new Chess[rowNum,colNum];
+        InitRangeSprites();
+    }
+
+    void InitRangeSprites()
+    {
         rangeSprites = new SpriteRenderer[rowNum, colNum];
+        attackRangeSprites = new SpriteRenderer[rowNum, colNum];
+        moveRangeSprites = new SpriteRenderer[rowNum, colNum];
         for (int i = 0; i < rowNum; i++)
         {
             for (int j = 0; j < colNum; j++)
             {
                 rangeSprites[i, j] = GameObject.Instantiate(rangePrefab, GetCellCenterWorld(i, j), Quaternion.identity).GetComponent<SpriteRenderer>();
-                rangeSprites[i, j].transform.parent = chessManager.transform;
+                attackRangeSprites[i, j] = GameObject.Instantiate(attackRangePrefab, GetCellCenterWorld(i, j), Quaternion.identity).GetComponent<SpriteRenderer>();
+                moveRangeSprites[i, j] = GameObject.Instantiate(moveRangePrefab, GetCellCenterWorld(i, j), Quaternion.identity).GetComponent<SpriteRenderer>();
+                rangeSprites[i, j].transform.parent = chessManager.chessBoardRange.transform;
+                attackRangeSprites[i, j].transform.parent = chessManager.attackRange.transform;
+                moveRangeSprites[i, j].transform.parent = chessManager.moveRange.transform;
                 rangeSprites[i, j].color = new Color(1, 1, 1, 0.1f); // Set initial transparency to 0
+                attackRangeSprites[i, j].color = new Color(1, 1, 1, 0); // Set initial transparency to 0
+                moveRangeSprites[i, j].color = new Color(1, 1, 1, 0); // Set initial transparency to 0
             }
         }
     }
+    public static bool IsInMoveRange(Vector2Int pos)
+    {
+        if (IsOnBoard(pos.x, pos.y))
+        {
+            return instance.moveRangeSprites[pos.y, pos.x].color.a > 0;
+        }
+        return false;
+    }
+    public void HideRange()
+    {
+        ChessManager.instance.moveRange.SetActive(false);
+        ChessManager.instance.attackRange.SetActive(false);
+    }
+    public void ShowRange(List<Vector2Int> rangeList, Color highlightColor, bool showMoveRange)
+    {
+        if(showMoveRange)
+        {
+            foreach(SpriteRenderer sprite in instance.moveRangeSprites)
+            {
+                sprite.color = Color.clear;
+            }
+            foreach (Vector2Int pos in rangeList)
+            {
+                if (IsOnBoard(pos.x, pos.y))
+                {
+                    instance.moveRangeSprites[pos.y, pos.x].color = highlightColor;
+                }
+            }
+            ChessManager.instance.moveRange.SetActive(true);
+        }
+        else
+        {
+            foreach (SpriteRenderer sprite in instance.attackRangeSprites)
+            {
+                sprite.color = Color.clear;
+            }
+            foreach (Vector2Int pos in rangeList)
+            {
+                if (IsOnBoard(pos.x, pos.y))
+                {
+                    instance.attackRangeSprites[pos.y, pos.x].color = highlightColor;
+                }
+            }
+            ChessManager.instance.attackRange.SetActive(true);
+        }
+    }
+    public static bool IsInAttackRange(Vector2Int pos)
+    {
+        if (IsOnBoard(pos.x, pos.y))
+        {
+            return instance.attackRangeSprites[pos.y, pos.x].color.a > 0;
+        }
+        return false;
+    }
+
     public Chess this[int row,int col]
     {
         get
         {
-            return chessBoard[row, col]; // 返回指定行列的值
+            if(IsOnBoard(col, row))
+                return chessBoard[row, col]; // 返回指定行列的值
+            else
+                return null;
         }
         set
         {
-            chessBoard[row, col] = value; // 设置指定行列的值
+            if(IsOnBoard(col, row))
+                chessBoard[row, col] = value; // 设置指定行列的值
         }
     }
     public static Chess GetChess(Vector2Int cellPos)
@@ -90,5 +170,9 @@ public class ChessBoard
     public static bool IsOnBoard(int x, int y)
     {
         return x >= 0 && x < instance.colNum && y >= 0 && y < instance.rowNum;
+    }
+    public static bool IsInView(int x,int y)
+    {
+        return x >= 0 && x < instance.colNum && y >= ChessManager.instance.basePosition.y && y <= ChessManager.instance.highestRow;
     }
 }

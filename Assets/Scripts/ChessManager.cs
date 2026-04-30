@@ -27,6 +27,9 @@ public class ChessManager : MonoBehaviour
     [Header("棋盘")]
     [SerializeField] Vector2Int boardSize = new Vector2Int(9, 10);
     ChessBoard chessBoard = null;
+    public GameObject chessBoardRange;
+    public GameObject attackRange;
+    public GameObject moveRange;
     [SerializeField] Vector3 mousePosition;
     [SerializeField] Vector3Int cellPosition;
     public Tilemap tilemap;
@@ -34,18 +37,24 @@ public class ChessManager : MonoBehaviour
     [SerializeField] string chessDataPath = "Assets/LO/01.txt";
     [SerializeField] Player player = null;
     [SerializeField] Chess select = null;
-    [Header("基地")]
+    [Header("基地和卷轴")]
     [SerializeField] Base baseChess;
     public Vector2Int basePosition { get { return new Vector2Int(baseChess.x, baseChess.y); } }
-    int highestRow = 9;
+    public int highestRow = 9;
     [SerializeField] UI_Cursor cursor;
     //[SerializeField] UI_AdjustPanels adjustPanels;
     [SerializeField] string testMassage;
     void Start()
     {
+        if(chessBoardRange == null || attackRange == null || moveRange == null)
+        {
+            Debug.LogError("Please assign chessBoardRange, attackRange, moveRange and playerRange in the inspector.");
+            return;
+        }
+
         ChessManager.instance = this;
         ChessFactory.Init();
-        chessBoard = new ChessBoard();
+        
         chessList = new List<Chess>();
         actingChessStack = new Stack<Chess>();
         char chessType = 'p';
@@ -85,6 +94,9 @@ public class ChessManager : MonoBehaviour
                 break;
             }
         }
+        chessBoard = new ChessBoard();
+        chessBoard.moveRangeParent = moveRange.transform;
+        chessBoard.attackRangeParent = attackRange.transform;
         chessBoard.Init(boardSize.y, boardSize.x, this);
         for (int i = boardSize.y - 1; i >= 0; i--)
         {
@@ -154,7 +166,7 @@ public class ChessManager : MonoBehaviour
                 i--;
             }
         }
-        int newHighestRow = Mathf.Min(basePosition.y + 9, ChessBoard.instance.rowNum);
+        int newHighestRow = Mathf.Min(basePosition.y + 9, ChessBoard.instance.rowNum - 1);
         if (newHighestRow > highestRow)
         {
             for(int i = highestRow + 1; i <= newHighestRow; i++)
@@ -162,7 +174,7 @@ public class ChessManager : MonoBehaviour
                 for(int j = 0; j < ChessBoard.instance.colNum; j++)
                 {
                     Chess chess = chessBoard[i, j];
-                    if (chess != null)
+                    if (chess != null && chess.camp != player.camp)
                     {
                         chessList.Add(chess);
                     }
@@ -238,11 +250,27 @@ public class ChessManager : MonoBehaviour
     {
         foreach (Chess chess in chessPrepareToActList)
         {
+            if (!chess.gameObject.activeSelf)
+            {
+                continue;
+            }
             PushActingChess(chess);
             chess.Act();
             while (haveActingChess())
             {
                 while(haveActingChess() && !PeekActingChess().isActing)
+                    PopActingChess();
+                yield return null;
+            }
+            if (!chess.gameObject.activeSelf)
+            {
+                continue;
+            }
+            PushActingChess(chess);
+            chess.Act();
+            while (haveActingChess())
+            {
+                while (haveActingChess() && !PeekActingChess().isActing)
                     PopActingChess();
                 yield return null;
             }

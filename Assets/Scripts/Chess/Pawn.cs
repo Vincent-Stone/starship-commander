@@ -115,7 +115,7 @@ public class Pawn : Chess
     }
     public override List<Vector2Int> GetAttackRange()
     {
-        throw new System.NotImplementedException();
+       return new List<Vector2Int>();
     }
     //public void TakeDamage(int damage, Chess attacker = null, Vector2Int attackDirection = new Vector2Int())
     //{

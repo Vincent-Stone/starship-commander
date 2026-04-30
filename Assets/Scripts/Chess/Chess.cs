@@ -20,7 +20,7 @@ public abstract class Chess : MonoBehaviour , IDamageable
     public bool canMove = true;
     public int x;
     public int y;
-    internal SpriteRenderer[,] rangeSprites = null;
+    //internal SpriteRenderer[,] rangeSprites = null;
     public Vector2Int cellPosition { get { return new Vector2Int(x, y); } }
     public float moveDuration = 0.001f;
     public bool isActing = false;
@@ -32,7 +32,7 @@ public abstract class Chess : MonoBehaviour , IDamageable
     internal List<ActionType> actionTypeList = new List<ActionType>() { ActionType.Move, ActionType.Ride, ActionType.Punch, ActionType.Shoot };
     internal int actionTypeIndex = 0;
     public abstract void Act();
-    public void InitRangeSprites()
+    /*public void InitRangeSprites(GameObject rangePrefab, Transform parent)
     {
         if (rangeSprites == null)
         {
@@ -41,55 +41,38 @@ public abstract class Chess : MonoBehaviour , IDamageable
             {
                 for (int j = 0; j < ChessBoard.instance.colNum; j++)
                 {
-                    rangeSprites[i, j] = GameObject.Instantiate(ChessBoard.instance.rangePrefab, ChessBoard.GetCellCenterWorld(i, j), Quaternion.identity).GetComponent<SpriteRenderer>();
-                    rangeSprites[i, j].transform.parent = ChessManager.instance.transform;
-                    rangeSprites[i, j].color = new Color(1, 1, 1, 0.1f); // Set initial transparency to 0
+                    rangeSprites[i, j] = GameObject.Instantiate(rangePrefab, ChessBoard.GetCellCenterWorld(i, j), Quaternion.identity).GetComponent<SpriteRenderer>();
+                    rangeSprites[i, j].transform.parent = parent;
+                    rangeSprites[i, j].color = new Color(1, 1, 1, 0); // Set initial transparency to 0
                 }
             }
         }
-    }
+    }*/
 
-    public void ShowRange(List<Vector2Int> rangeList, Color highlightColor)
+    /*public virtual void InitRangeSprites(Transform parent)
     {
-        HideRange();
-        foreach (Vector2Int pos in rangeList)
-        {
-            if (pos.x >= 0 && pos.x < ChessBoard.instance.colNum && pos.y >= 0 && pos.y < ChessBoard.instance.rowNum)
-            {
-                rangeSprites[pos.y, pos.x].color = highlightColor;
-                rangeSprites[pos.y, pos.x].sortingOrder = 10;
-            }
-        }
-    }
-    public virtual void HideRange()
-    {
-        if (rangeSprites == null)
-            InitRangeSprites();
-        if (rangeSprites != null)
-        {
-            foreach (SpriteRenderer range in rangeSprites)
-            {
-                range.color = Color.clear;
-            }
-        }
-    }
+        InitRangeSprites(ChessBoard.instance.rangePrefab, parent);
+    }*/
+
+    
     public virtual void ShowRange()
     {
-        if (rangeSprites == null)
-            InitRangeSprites();
-        ShowRange(GetMoveRange(), new Color(0, 1, 0, 0.2f));
+        ChessBoard.instance.HideRange();
+        ChessBoard.instance.ShowRange(GetMoveRange(), new Color(0, 1, 0, 0.8f), true);
+        ChessBoard.instance.ShowRange(GetAttackRange(), new Color(1, 0, 0, 0.8f), false);
     }
-
+    
     public bool IsInRange(Vector2Int pos)
     {
         if (ChessBoard.IsOnBoard(pos.x, pos.y))
         {
-            if(rangeSprites == null)
+            if(ChessManager.instance.moveRange.activeSelf == true)
             {
-                Debug.LogError("rangeSprites of " + name + " is null.");
+                return ChessBoard.IsInMoveRange(pos);
+            }else if(ChessManager.instance.attackRange.activeSelf == true)
+                return ChessBoard.IsInAttackRange(pos);
+            else
                 return false;
-            }
-            return rangeSprites[pos.y, pos.x].color != Color.clear;
         }
         else
             return false;
