@@ -136,6 +136,7 @@ MonoBehaviour:
   x: 0
   y: 0
   moveDuration: 0.001
+  speed: 10
   isActing: 0
   canBeForcedMoved: 1
   value: 0

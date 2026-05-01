@@ -56,14 +56,12 @@ public abstract class MovableEnemy : Chess
                     }
                 }
             }
-            //ChessManager.instance.PushActingChess(this);
             A_Attack(attackTarget.x - x, attackTarget.y - y);
         }
         else
         {
             isAttackState = true;
             moveTarget = GetBestMoveTarget(GetMoveRange(x, y), this);
-            //ChessManager.instance.PushActingChess(this);
             A_Move(moveTarget.x - x, moveTarget.y - y);
         }
     }
@@ -104,8 +102,7 @@ public abstract class MovableEnemy : Chess
     IEnumerator Attack(int x,int y)
     {
         Chess targetChess = ChessBoard.GetChess(new Vector2Int(x, y));
-        //ChessManager.instance.PushActingChess(targetChess);
-        targetChess.TakeDamage(1, this);
+        targetChess.TakeDamage(1, this, new Vector2Int(x - this.x, y - this.y));
         isActing = false;
         yield break;
     }
@@ -119,30 +116,16 @@ public abstract class MovableEnemy : Chess
             ChessBoard.instance[y, x] = null;
         x += dx;
         y += dy;
+        for(float t = 0; t < moveDuration; t += Time.deltaTime)
+        {
+            transform.position = Vector3.Lerp(startPosition, endPosition, t / moveDuration);
+            yield return null;
+        }
         transform.position = endPosition;
         ChessBoard.instance[y, x] = this;
         isActing = false;
         yield break;
     }
-    //internal virtual int GetAttackPriority(int dx, int dy)
-    //{
-    //    int priority = 0;
-    //    Chess thisChess = this;
-    //    if (rider != null)
-    //        thisChess = rider;
-    //    Chess target = ChessBoard.instance[dy, dx];
-    //    if (target != null)
-    //    {
-    //        if (target.camp != thisChess.camp)
-    //        {
-    //            priority += target.value;
-    //        }
-    //    }
-    //    GetMoveRange(dx, dy);
-    //    //priority += AP.Count;
-    //    return priority;
-    //}
-
     public override List<Vector2Int> GetMoveRange()
     {
         List<MoveInfo> attackPointsCount;

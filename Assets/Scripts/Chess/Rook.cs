@@ -19,7 +19,7 @@ public class Rook : MovableEnemy
     {
         attackPriority = 0;
         List<Vector2Int> rangeList = new List<Vector2Int>();
-        if (y > 0)
+        if (targetY > 0)
         {
             rangeList.Add(new Vector2Int(targetX, targetY - 1));
             if (ChessBoard.instance[targetY - 1, targetX] != null && ChessBoard.instance[targetY - 1, targetX].camp != thisChess.camp)
@@ -28,7 +28,7 @@ public class Rook : MovableEnemy
                 attackPriority += value;
             }
         }
-        if (x > 0)
+        if (targetX > 0)
         {
             rangeList.Add(new Vector2Int(targetX - 1, targetY));
             if (ChessBoard.instance[targetY, targetX - 1] != null && ChessBoard.instance[targetY, targetX - 1].camp != thisChess.camp)
@@ -37,7 +37,7 @@ public class Rook : MovableEnemy
                 attackPriority += value;
             }
         }
-        if (x < ChessBoard.instance.colNum - 1)
+        if (targetX < ChessBoard.instance.colNum - 1)
         {
             rangeList.Add(new Vector2Int(targetX + 1, targetY));
             if (ChessBoard.instance[targetY, targetX + 1] != null && ChessBoard.instance[targetY, targetX + 1].camp != thisChess.camp)
@@ -46,7 +46,7 @@ public class Rook : MovableEnemy
                 attackPriority += value;
             }
         }
-        if (y < ChessBoard.instance.rowNum - 1)
+        if (targetY < ChessBoard.instance.rowNum - 1)
         {
             rangeList.Add(new Vector2Int(targetX, targetY + 1));
             if(ChessBoard.instance[targetY + 1, targetX] != null && ChessBoard.instance[targetY + 1, targetX].camp != thisChess.camp)

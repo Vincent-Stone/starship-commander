@@ -20,40 +20,20 @@ public abstract class Chess : MonoBehaviour , IDamageable
     public bool canMove = true;
     public int x;
     public int y;
-    //internal SpriteRenderer[,] rangeSprites = null;
+    public int maxHitPoints = 1;
+    public int hitPoints = 1;
     public Vector2Int cellPosition { get { return new Vector2Int(x, y); } }
     public float moveDuration = 0.001f;
+    public int speed;
     public bool isActing = false;
     public bool canBeForcedMoved = true;
     public int value = 0;
     [SerializeField] internal Vector2Int axisForce;
     internal int frozenTurns = 0;
     public Chess rider = null;
-    internal List<ActionType> actionTypeList = new List<ActionType>() { ActionType.Move, ActionType.Ride, ActionType.Punch, ActionType.Shoot };
+    internal List<ActionType> actionTypeList = new List<ActionType>() { ActionType.Enemy };
     internal int actionTypeIndex = 0;
     public abstract void Act();
-    /*public void InitRangeSprites(GameObject rangePrefab, Transform parent)
-    {
-        if (rangeSprites == null)
-        {
-            rangeSprites = new SpriteRenderer[ChessBoard.instance.rowNum, ChessBoard.instance.colNum];
-            for (int i = 0; i < ChessBoard.instance.rowNum; i++)
-            {
-                for (int j = 0; j < ChessBoard.instance.colNum; j++)
-                {
-                    rangeSprites[i, j] = GameObject.Instantiate(rangePrefab, ChessBoard.GetCellCenterWorld(i, j), Quaternion.identity).GetComponent<SpriteRenderer>();
-                    rangeSprites[i, j].transform.parent = parent;
-                    rangeSprites[i, j].color = new Color(1, 1, 1, 0); // Set initial transparency to 0
-                }
-            }
-        }
-    }*/
-
-    /*public virtual void InitRangeSprites(Transform parent)
-    {
-        InitRangeSprites(ChessBoard.instance.rangePrefab, parent);
-    }*/
-
     
     public virtual void ShowRange()
     {
@@ -82,10 +62,24 @@ public abstract class Chess : MonoBehaviour , IDamageable
     public abstract List<Vector2Int> GetAttackRange();
     public virtual void TakeDamage(int damage, Chess attacker = null, Vector2Int attackDirection = new Vector2Int())
     {
+        if(hitPoints <= 0)
+        {
+            isActing = false;
+            return;
+        }
+        ChessManager.instance.PushActingChess(this);
+        Debug.Log("Damaged! attacker = " + attacker);
+        hitPoints -= damage;
+        if(hitPoints <= 0)
+        {
+            Die();
+        }
+        isActing = false;
+    }
+    public virtual void Die()
+    {
         if (ChessBoard.instance[this.y, this.x] == this)
             ChessBoard.instance[this.y, this.x] = null;
-        Debug.Log("Damaged! attacker = " + attacker);
-        isActing = false;
         this.gameObject.SetActive(false);
     }
     public void Freeze(int duration)
@@ -220,7 +214,7 @@ public abstract class Chess : MonoBehaviour , IDamageable
     IEnumerator ForcedMovingCoroutine (Vector2Int forcedMoveTarget)
     {
         Vector3 startPosition = transform.position, endPosition = ChessBoard.GetCellCenterWorld(forcedMoveTarget);
-        for(float timer = 0; timer < 1; timer += Time.deltaTime / 0.1f)
+        for(float timer = 0; timer < 1; timer += Time.deltaTime / 0.2f)
         {
             transform.position = Vector3.Lerp(startPosition, endPosition, -Mathf.Pow((timer - 1), 6) + 1);
             yield return null;

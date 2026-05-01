@@ -23,8 +23,9 @@ public class ChessBoard
     public static Tilemap tilemap;
     public void Init(int rowNum, int colNum, ChessManager chessManager)
     {
+        Debug.Log("Init ChessBoard");
         instance = this;
-        
+        ClearChessBoard();
         if (chessManager.tilemap == null)
         {
             Debug.LogError("Tilemap is not assigned in ChessBoard.");
@@ -34,17 +35,26 @@ public class ChessBoard
             tilemap = chessManager.tilemap;
         }
         this.chessManager = chessManager;
-        this.rangePrefab = Resources.Load("Prefabs/Range") as GameObject;
-        this.attackRangePrefab = Resources.Load("Prefabs/AttackRange") as GameObject;
-        this.moveRangePrefab = Resources.Load("Prefabs/MoveRange") as GameObject;
+        if (rangeSprites == null)
+            this.rangePrefab = Resources.Load("Prefabs/Range") as GameObject;
+        if(attackRangeSprites == null)
+            this.attackRangePrefab = Resources.Load("Prefabs/AttackRange") as GameObject;
+        if (moveRangeSprites == null)
+            this.moveRangePrefab = Resources.Load("Prefabs/MoveRange") as GameObject;
         this.rowNum = rowNum;
         this.colNum = colNum;
-        chessBoard = new Chess[rowNum,colNum];
+        if(chessBoard != null && (chessBoard.GetLength(0) != rowNum || chessBoard.GetLength(1) != colNum))
+        {
+            chessBoard = new Chess[rowNum, colNum];
+        }
+        if (chessBoard == null)
+            chessBoard = new Chess[rowNum,colNum];
         InitRangeSprites();
     }
 
     void InitRangeSprites()
     {
+        Debug.Log("Init Range Sprites");
         rangeSprites = new SpriteRenderer[rowNum, colNum];
         attackRangeSprites = new SpriteRenderer[rowNum, colNum];
         moveRangeSprites = new SpriteRenderer[rowNum, colNum];
@@ -52,6 +62,8 @@ public class ChessBoard
         {
             for (int j = 0; j < colNum; j++)
             {
+                if (rangeSprites[i, j] != null)
+                    continue;
                 rangeSprites[i, j] = GameObject.Instantiate(rangePrefab, GetCellCenterWorld(i, j), Quaternion.identity).GetComponent<SpriteRenderer>();
                 attackRangeSprites[i, j] = GameObject.Instantiate(attackRangePrefab, GetCellCenterWorld(i, j), Quaternion.identity).GetComponent<SpriteRenderer>();
                 moveRangeSprites[i, j] = GameObject.Instantiate(moveRangePrefab, GetCellCenterWorld(i, j), Quaternion.identity).GetComponent<SpriteRenderer>();
@@ -64,6 +76,35 @@ public class ChessBoard
             }
         }
     }
+    void ClearChessBoard()
+    {
+        Debug.Log("Clear ChessBoard");
+        if (chessBoard == null)
+            return;
+        foreach(Chess chess in chessBoard)
+        {
+            if (chess != null && (chess.chessTypeName != "Base" && chess.chessTypeName != "Player"))
+            {
+                GameObject.Destroy(chess.gameObject);
+            }
+        }
+        if (rangeSprites == null || attackRangeSprites == null || moveRangeSprites == null)
+            return;
+        foreach (SpriteRenderer sprite in rangeSprites)
+        {
+            GameObject.Destroy(sprite.gameObject);
+        }
+        foreach (SpriteRenderer sprite in attackRangeSprites)
+        {
+            GameObject.Destroy(sprite.gameObject);
+        }
+        foreach (SpriteRenderer sprite in moveRangeSprites)
+        {
+            GameObject.Destroy(sprite.gameObject);
+        }
+    }
+
+
     public static bool IsInMoveRange(Vector2Int pos)
     {
         if (IsOnBoard(pos.x, pos.y))
@@ -134,6 +175,12 @@ public class ChessBoard
                 chessBoard[row, col] = value; // 设置指定行列的值
         }
     }
+
+    /// <summary>
+    /// 获取指定位置的棋子。
+    /// </summary>
+    /// <param name="cellPos">棋盘上的单元格位置。</param>
+    /// <returns>如果单元格在棋盘内且上单元格位置有棋子则返回该棋子，否则返回 null。</returns>
     public static Chess GetChess(Vector2Int cellPos)
     {
         if (IsOnBoard(cellPos.x, cellPos.y))
@@ -167,10 +214,22 @@ public class ChessBoard
             return new Vector2Int(-1, -1); // Return an invalid position if out of bounds
         }
     }
+    /// <summary>
+    /// 判断指定位置是否在棋盘上。
+    /// </summary>
+    /// <param name="x">单元格位置的列索引（x坐标）。</param>
+    /// <param name="y">单元格位置的行索引（y坐标）。</param>
+    /// <returns>如果单元格在棋盘上则返回 true，否则返回 false。</returns>
     public static bool IsOnBoard(int x, int y)
     {
         return x >= 0 && x < instance.colNum && y >= 0 && y < instance.rowNum;
     }
+    /// <summary>
+    /// 判断指定位置是否在可视区域内。
+    /// </summary>
+    /// <param name="x">单元格位置的列索引（x坐标）。</param>
+    /// <param name="y">单元格位置的行索引（y坐标）。</param>
+    /// <returns>如果单元格在可视区域内则返回 true，否则返回 false。</returns>
     public static bool IsInView(int x,int y)
     {
         return x >= 0 && x < instance.colNum && y >= ChessManager.instance.basePosition.y && y <= ChessManager.instance.highestRow;

@@ -9,6 +9,7 @@ public class Pawn : Chess
     {
         camp = 1;
         chessTypeName = "Missile";
+        hitPoints = maxHitPoints;
     }
     public override void Act()
     {

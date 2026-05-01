@@ -42,11 +42,11 @@ public class ChessManager : MonoBehaviour
     public Vector2Int basePosition { get { return new Vector2Int(baseChess.x, baseChess.y); } }
     public int highestRow = 9;
     [SerializeField] UI_Cursor cursor;
-    //[SerializeField] UI_AdjustPanels adjustPanels;
     [SerializeField] string testMassage;
-    void Start()
+    public void Init()
     {
-        if(chessBoardRange == null || attackRange == null || moveRange == null)
+        Debug.Log("Init ChessManager");
+        if (chessBoardRange == null || attackRange == null || moveRange == null)
         {
             Debug.LogError("Please assign chessBoardRange, attackRange, moveRange and playerRange in the inspector.");
             return;
@@ -94,9 +94,12 @@ public class ChessManager : MonoBehaviour
                 break;
             }
         }
-        chessBoard = new ChessBoard();
-        chessBoard.moveRangeParent = moveRange.transform;
-        chessBoard.attackRangeParent = attackRange.transform;
+        if(chessBoard == null)
+        {
+            chessBoard = new ChessBoard();
+            chessBoard.moveRangeParent = moveRange.transform;
+            chessBoard.attackRangeParent = attackRange.transform;
+        }
         chessBoard.Init(boardSize.y, boardSize.x, this);
         for (int i = boardSize.y - 1; i >= 0; i--)
         {
@@ -109,21 +112,12 @@ public class ChessManager : MonoBehaviour
                     chessType = line[j];
                 else
                     chessType = ' ';
-                switch (chessType)
+                if(chessType == ' ' || chessType == 'x')
                 {
-                    case 'p':
-                        chess = ChessFactory.CreateChess(chessType, this.transform);
-                        break;
-                    case 'k':
-                        chess = ChessFactory.CreateChess(chessType, this.transform);
-                        break;
-                    case 'r':
-                        chess = ChessFactory.CreateChess(chessType, this.transform);
-                        break;
-                    default:
-                        chessBoard[i, j] = null;
-                        break;
+                    chessBoard[i, j] = null;
+                    continue;
                 }
+                chess = ChessFactory.CreateChess(chessType, this.transform);
                 if (chess != null)
                 {
                     chess.x = j;
@@ -144,10 +138,10 @@ public class ChessManager : MonoBehaviour
         }
         reader.Close();
         PlaceBase();
-        //StartCoroutine(MainPhase());
     }
     void PlaceBase()
     {
+        Debug.Log("PlaceBase");
         if (baseChess != null)
         {
             baseChess.InitBaseAndPlayer();
@@ -206,21 +200,7 @@ public class ChessManager : MonoBehaviour
         }
         return actingChessStack.Peek();
     }
-    void PopActingChess(Chess actingChess)
-    {
-        if (actingChessStack.Count == 0)
-        {
-            Debug.LogError("Trying to pop from an empty acting chess stack.");
-            return;
-        }
-        if (actingChessStack.Peek() != actingChess)
-        {
-            Debug.LogError("Trying to pop a chess that is not on top of the acting chess stack.");
-            return;
-        }
-        actingChess.isActing = false;
-        actingChessStack.Pop();
-    }
+
     public bool haveActingChess()
     {
         return actingChessStack.Count > 0;
@@ -230,6 +210,7 @@ public class ChessManager : MonoBehaviour
 
     public void EnemyTurnStart()
     {
+        Debug.Log("Enemy Turn Start");
         chessPrepareToActList = new List<Chess>();
         for(int i=0;i<chessList.Count;i++)
         {
@@ -248,12 +229,32 @@ public class ChessManager : MonoBehaviour
     }
     IEnumerator EnemyTurnUpdate()
     {
-        foreach (Chess chess in chessPrepareToActList)
+        while(chessPrepareToActList.Count > 0)
         {
-            if (!chess.gameObject.activeSelf)
+            Chess chess = null;
+            int index = -1;
+            int maxSpeed = -1;
+            for (int i = 0; i < chessPrepareToActList.Count; i++)
             {
-                continue;
+                if (chessPrepareToActList[i].gameObject.activeSelf == false)
+                {
+                    chessPrepareToActList.RemoveAt(i);
+                    i--;
+                    continue;
+                }
+                if (chessPrepareToActList[i].speed > maxSpeed)
+                {
+                    chess = chessPrepareToActList[i];
+                    maxSpeed = chess.speed;
+                    index = i;
+                }
             }
+            if (index == -1 || chess == null)
+                continue;
+            chessPrepareToActList.RemoveAt(index);
+
+            //每个敌方棋子行动两次
+            //第一次行动
             PushActingChess(chess);
             chess.Act();
             while (haveActingChess())
@@ -266,6 +267,7 @@ public class ChessManager : MonoBehaviour
             {
                 continue;
             }
+            //第二次行动
             PushActingChess(chess);
             chess.Act();
             while (haveActingChess())
@@ -277,66 +279,6 @@ public class ChessManager : MonoBehaviour
         }
         player.PlayerTurnStart();
     }
-    //void MainPhaseUpdate()
-    //{
-    //    if (player.actionType != lastActionType)
-    //    {
-    //        OnChangePlayerActionType();
-    //    }
-    //    //adjustPanels.GetMouseInput(out int area, out Vector2 mouseWorldPosition);
-    //    int area = 1;
-    //    mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-    //    OnUpdateMousePosition(area, mousePosition);
-    //    Vector3Int lastCellPosition = cellPosition;
-    //    cellPosition = tilemap.WorldToCell(mousePosition);
-    //    if(lastCellPosition != cellPosition)
-    //    {
-    //        OnUpdateMouseCellPosition();
-    //    }
-    //    if (Input.GetMouseButtonDown(0))
-    //    {
-    //        OnClicked(area, mousePosition);
-    //    }
-    //}
-
-
-
-    //IEnumerator MainPhase()
-    //{
-    //    player.ShowRange();
-    //    OnChangePlayerActionType();
-    //    while (gameState == GameState.MainPhase)
-    //    {
-    //        MainPhaseUpdate();
-    //        yield return null;
-    //    }
-    //    StartCoroutine(BattlePhase());
-    //}
-
-    //IEnumerator BattlePhase()
-    //{
-    //    Chess currentActingChess;
-    //    foreach (Chess chess in chessList)
-    //    {
-    //        if(chess.gameObject.activeSelf == false)
-    //        {
-    //            continue;
-    //        }
-    //        chess.isActing = true;
-    //        actingChessStack.Push(chess);
-    //        chess.Act();
-            
-    //        while (actingChessStack.Count>0)
-    //        {
-    //            currentActingChess = actingChessStack.Peek();
-    //            if(!currentActingChess.isActing)
-    //                actingChessStack.Pop();
-    //            yield return null;
-    //        }
-    //    }
-    //    gameState = GameState.MainPhase;
-    //    StartCoroutine(MainPhase());
-    //}
 
     [Header("测试")]
     [SerializeField] string chessBoardStr;

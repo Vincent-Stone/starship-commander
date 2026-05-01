@@ -4,13 +4,17 @@ using UnityEngine;
 
 public class ChessFactory : MonoBehaviour
 {
-    static GameObject Pawn,Knight,Rook;
+    static GameObject Pawn,Knight,Rook,Cannon;
     public static void Init()
     {
+        Debug.Log("Init ChessFactory");
+        if (Pawn != null && Knight != null && Rook != null)
+            return;
         Pawn = Resources.Load("Prefabs/Pawn") as GameObject;
         Knight = Resources.Load("Prefabs/Knight") as GameObject;
         Rook = Resources.Load("Prefabs/Rook") as GameObject;
-        if (Pawn == null && Knight == null && Rook == null)
+        Cannon = Resources.Load("Prefabs/Cannon") as GameObject;
+        if (Pawn == null && Knight == null && Rook == null && Cannon == null)
         {
             Debug.LogError("Failed to load Chess prefabs. Please check the path and prefab names.");
         }
@@ -30,6 +34,9 @@ public class ChessFactory : MonoBehaviour
                 break;
             case 'r':
                 chessObject = Instantiate(Rook, Vector3.zero, Quaternion.identity);
+                break;
+            case 'c':
+                chessObject = Instantiate(Cannon, Vector3.zero, Quaternion.identity);
                 break;
         }
         if (chessObject != null)

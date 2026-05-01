@@ -7,13 +7,12 @@ using ActionType = Player.ActionType;
 public class Base : Chess
 {
     [SerializeField] int shieldsNum = 0;
-    int hitPoints = 0;
     [SerializeField] int maxShieldsNum = 10;
-    [SerializeField] int maxHitPoints = 10;
     [SerializeField] UI_DataPanel dataPanel;
     [SerializeField] int baseValue = 100;
     public void InitBaseAndPlayer()
     {
+        Debug.Log("Init Base And Player");
         camp = 0;
         canMove = false;
         canBeRiden = true;

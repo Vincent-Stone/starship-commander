@@ -17,8 +17,8 @@ public class Player : Chess
         //HeavyPunch,
         Shoot,
         //LongShot
+        Enemy
     }
-    public Transform shootArrowTransform;
     [SerializeField] Bullet bullet;
     [SerializeField] UI_DataPanel dataPanel;
     // [SerializeField] TextMeshProUGUI rideOnName;
@@ -39,10 +39,16 @@ public class Player : Chess
                 return "No Energy";
         }
     }
+    [Header("UI标志")]
+    public Transform shootArrowTransform;
+    [SerializeField] SpriteRenderer blockSign;
     [Header("数值")]
-    [SerializeField] int maxActionPoints = 2;
+    public int maxActionPoints = 2;
     [SerializeField] int actionPoints = 0;
+    [SerializeField] int maxLifePoints = 10;
+    [SerializeField] int lifePoints = 0;
     [SerializeField] int playerValue = 10;
+    [SerializeField] float qteTimeWindow = 0.5f;
     [Header("范围")]
     [SerializeField] List<Vector2Int> moveRangeList;
     [SerializeField] List<Vector2Int> attackRangeList;
@@ -57,9 +63,13 @@ public class Player : Chess
     public Chess selectedChess = null;
     public void InitPlayer()
     {
+        Debug.Log("Init Player");
+        StopAllCoroutines();
         actionTypeName.text = defaultActionTypeName;
         shootArrowTransform.gameObject.SetActive(false);
-        //hitPoints = maxHitPoints;
+        actionPoints = maxActionPoints;
+        actionTypeList = new List<ActionType>() { ActionType.Move, ActionType.Ride, ActionType.Punch, ActionType.Shoot };
+        lifePoints = maxLifePoints;
         if (dataPanel == null)
         {
             dataPanel = FindFirstObjectByType<UI_DataPanel>();
@@ -74,6 +84,9 @@ public class Player : Chess
         camp = 0;
         value = playerValue;
         bullet.gameObject.SetActive(false);
+        chessTypeName = "Player";
+        blockSign.color = Color.clear;
+        hitPoints = maxLifePoints;
         //if(baseChess != null)
         //    rideOnName.text = baseChess.chessTypeName;
         //weapon = new Weapon(new ActionType[] { ActionType.Punch});
@@ -151,14 +164,14 @@ public class Player : Chess
         actionPoints--;
         if (actionPoints <= 0)
         {
-            isInPlayerTurn = false;
             SetSelectedChess(null);
         }
     }
 
     public void PlayerTurnStart()
     {
-        if(!isInPlayerTurn)
+        Debug.Log("Player Turn Start");
+        if (!isInPlayerTurn)
         {
             isInPlayerTurn = true;
         }
@@ -170,8 +183,9 @@ public class Player : Chess
         }
         StartCoroutine(PlayerTurnUpdate());
     }
-    public void PlayTurnEnd()
+    public void PlayerTurnEnd()
     {
+        Debug.Log("Player Turn End");
         if (isInPlayerTurn)
         {
             isInPlayerTurn = false;
@@ -186,9 +200,9 @@ public class Player : Chess
     }
     IEnumerator PlayerTurnUpdate()
     {
-        while (isInPlayerTurn)
+        while (isInPlayerTurn && actionPoints> 0)
         {
-            mouseWorldPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            mouseWorldPosition = sceneCamera.ScreenToWorldPoint(Input.mousePosition);
             mouseCellPosition = ChessBoard.GetCell(mouseWorldPosition);
             if(lastMouseCellPosition != mouseCellPosition)
             {
@@ -208,11 +222,48 @@ public class Player : Chess
             yield return null;
         }
     }
+
+    public IEnumerator BossPrepareCoroutine()
+    {
+        ChessBoard.instance.HideRange();
+        if (ChessBoard.instance[y, x] == this)
+            ChessBoard.instance[y, x] = null;
+        if(rideOn == baseChess)
+        {
+            DropRideOn();
+            ChessBoard.instance[y, x] = baseChess;
+        }
+        while (true)
+        {
+            mouseWorldPosition = sceneCamera.ScreenToWorldPoint(Input.mousePosition);
+            mouseCellPosition = ChessBoard.GetCell(mouseWorldPosition);
+            transform.position = ChessBoard.GetCellCenterWorld(mouseCellPosition);
+            if(Input.GetMouseButtonDown(0))
+            {
+                if(ChessBoard.GetChess(mouseCellPosition) == null)
+                {
+                    x = mouseCellPosition.x;
+                    y = mouseCellPosition.y;
+                    ChessBoard.instance[y, x] = this;
+                    break;
+                }
+            }
+            yield return null;
+        }
+        PlayerTurnEnd();
+        yield return new WaitForSeconds(1f);
+    }
+
     public void Reborn()
     {
+        SetSelectedChess(null);
+        if (ChessBoard.instance[y, x] == this)
+            ChessBoard.instance[y, x] = null;
         x = baseChess.x;
         y = baseChess.y;
         transform.position = baseChess.transform.position;
+        ChessBoard.instance[y, x] = this;
+        this.SetRideOn(baseChess);
         isDead = false;
     }
     void OnUpdateMousePosition(int area, Vector3 mousePosition)
@@ -407,13 +458,13 @@ public class Player : Chess
     public List<Vector2Int> GetRideRange()
     {
         List<Vector2Int> rangeList = new List<Vector2Int>();
-        if (y > 0)
+        if (y > 0 && (ChessBoard.GetChess(new Vector2Int(x, y - 1)) == null || ChessBoard.GetChess(new Vector2Int(x, y - 1)).canBeRiden))
             rangeList.Add(new Vector2Int(x, y - 1));
-        if (x > 0)
+        if (x > 0 && (ChessBoard.GetChess(new Vector2Int(x - 1, y)) == null || ChessBoard.GetChess(new Vector2Int(x - 1, y)).canBeRiden))
             rangeList.Add(new Vector2Int(x - 1, y));
-        if (x < ChessBoard.instance.colNum - 1)
+        if (x < ChessBoard.instance.colNum - 1 && (ChessBoard.GetChess(new Vector2Int(x + 1, y)) == null || ChessBoard.GetChess(new Vector2Int(x + 1, y)).canBeRiden))
             rangeList.Add(new Vector2Int(x + 1, y));
-        if (y < ChessBoard.instance.rowNum - 1)
+        if (y < ChessBoard.instance.rowNum - 1 && (ChessBoard.GetChess(new Vector2Int(x, y + 1)) == null || ChessBoard.GetChess(new Vector2Int(x, y + 1)).canBeRiden))
             rangeList.Add(new Vector2Int(x, y + 1));
         return rangeList;
     }
@@ -459,9 +510,6 @@ public class Player : Chess
         }
         ChessBoard.instance[y,x] = this;
         A_ActEnd();
-        //if (actionPoints > 0)
-        //    ShowRange();
-        //isActing = false;
     }
     
     public void A_Punch(int dx, int dy)
@@ -479,12 +527,14 @@ public class Player : Chess
         Chess target = ChessBoard.instance[y + dy, x + dx];
         Vector3 startPosition = transform.position;
         Vector3 endPosition = transform.position + new Vector3(dx, dy, 0);
+        Chess dropedRideOn = null;
         if (rideOn != null)
         {
             rideOn.x = x;
             rideOn.y = y;
             if (ChessBoard.instance[y, x] == this)
                 ChessBoard.instance[y, x] = rideOn;
+            dropedRideOn = rideOn;
             DropRideOn();
         }
         else
@@ -500,6 +550,8 @@ public class Player : Chess
         {
             SetRideOn(target);
         }
+        if(dropedRideOn != null && dropedRideOn != baseChess)
+            dropedRideOn.TakeDamage(1, this, new Vector2Int(dx, dy));
         A_ActEnd();
     }
     public IEnumerator Shoot(int targetX, int targetY)
@@ -521,14 +573,41 @@ public class Player : Chess
     {
         //if(!isDead)
         //    isDead = true;
-        isActing = true;
         ChessManager.instance.PushActingChess(this);
-        StartCoroutine(Damaged());
+        StartCoroutine(Damaged(attackDirection));
     }
 
-    IEnumerator Damaged()//受击效果
+    IEnumerator Damaged(Vector2Int attackDirection)//受击效果
     {
-        for (float i = 0; i <= 2 * Mathf.PI; i++)
+        bool isBlocked = false;
+        blockSign.color = Color.yellow;
+        for (float t = 0; t < qteTimeWindow; t += Time.deltaTime)
+        {
+            if(Input.GetMouseButtonDown(0))
+            {
+                isBlocked = true;
+                blockSign.color = Color.green;
+                break;
+            }
+            yield return null;
+        }
+        if (isBlocked) 
+        {
+            Debug.Log("格挡成功");
+            //yield return new WaitForSeconds(0.2f);
+            AddForce(attackDirection);
+            ForcedMove();
+            blockSign.color = Color.clear;
+            yield break;
+        }
+        else
+        {
+            blockSign.color = Color.red;
+            Debug.Log("格挡失败");
+            yield return new WaitForSeconds(0.2f);
+            blockSign.color = Color.clear;
+        }
+        for (float i = 0; i <= 2 * Mathf.PI; i += 1)
         {
             transform.Rotate(new Vector3(0, 0, i));
             yield return null;
