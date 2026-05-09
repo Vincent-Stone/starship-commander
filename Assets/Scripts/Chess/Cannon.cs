@@ -15,6 +15,7 @@ public class Cannon : Chess
         canMove = false; // Cannon不能移动
         value = 3; // 设置一个合适的value值
         hitPoints = maxHitPoints; // Cannon只有一点血量
+        hpUI.UpdateHP(hitPoints);
     }
 
     public override void Act()
@@ -34,8 +35,7 @@ public class Cannon : Chess
             if (energy < fullEnergy)
             {
                 // 蓄力阶段
-                energy++;
-                Debug.Log($"Cannon at ({x}, {y}) is charging: {energy}/{fullEnergy}");
+                Charge();
                 isActing = false;
             }
             else
@@ -53,6 +53,12 @@ public class Cannon : Chess
         }
     }
 
+    void Charge()
+    {
+        energy++;
+        Debug.Log($"Cannon at ({x}, {y}) is charging: {energy}/{fullEnergy}");
+    }
+
     void AttackForward()
     {
         GetAttackRange(); // 获取攻击范围并确定攻击目标
@@ -67,18 +73,6 @@ public class Cannon : Chess
         if(attackTarget != null)
             attackTarget.TakeDamage(1, this, new Vector2Int(0, -1));
         isActing = false;
-    }
-
-    void ShowAttackEffect(List<Vector2Int> path)
-    {
-        // 这里可以添加视觉效果，比如显示攻击路径
-        // 实际项目中可以在这里实例化特效
-        foreach (var pos in path)
-        {
-            Debug.DrawLine(ChessBoard.GetCellCenterWorld(y, x),
-                          ChessBoard.GetCellCenterWorld(pos.y, pos.x),
-                          Color.red, 1f);
-        }
     }
 
     public override List<Vector2Int> GetAttackRange()
@@ -142,6 +136,7 @@ public class Cannon : Chess
             }
         }
         yield return new WaitForSeconds(0.2f); // 等待爆炸效果结束
+        isActing = false;
         // 最后移除Cannon
         gameObject.SetActive(false);
         yield return null;

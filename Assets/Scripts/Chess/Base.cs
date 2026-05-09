@@ -18,8 +18,9 @@ public class Base : Chess
         canBeRiden = true;
         chessTypeName = "Base";
         shieldsNum = maxShieldsNum;
+        hpUI.UpdateHP(shieldsNum);
         hitPoints = maxHitPoints;
-        canBeForcedMoved = false;
+        canBeHitByBullet = false;
         value = baseValue;
         actionTypeList = new List<ActionType>() { ActionType.Move };
         if (dataPanel == null)
@@ -48,6 +49,11 @@ public class Base : Chess
     }
     public void A_Move(int dx,int dy,int actionPoints)
     {
+        bool intoBoosArea = dy + y + 10 >= ChessBoard.instance.rowNum;
+        if (intoBoosArea)//准备进入BOSS战
+        {
+            dy = ChessBoard.instance.rowNum - 10 - y;
+        }
         Vector3 startPosition = transform.position;
         Vector3 endPosition = transform.position + new Vector3(dx, dy, 0);
         Chess target = ChessBoard.instance[y + dy, x + dx];
@@ -59,14 +65,19 @@ public class Base : Chess
         ChessBoard.instance[y, x] = this;
         if (actionPoints > 0)
             ShowRange();
-        isActing = false;
         ChessManager.instance.UpdateChessList();
+        if(intoBoosArea)
+        {
+            StageManager.instance.BossStart();
+        }
+        isActing = false;
     }
     public override void TakeDamage(int damage, Chess attacker = null, Vector2Int attackDirection = new Vector2Int())
     {
         if(shieldsNum > 0)
         {
             shieldsNum--;
+            hpUI.UpdateHP(shieldsNum);
             //dataPanel.UpdateSlider(UI_DataPanel.SliderType.BaseShield, shieldsNum / (float)maxShieldsNum);
             //if (attacker)
             //{

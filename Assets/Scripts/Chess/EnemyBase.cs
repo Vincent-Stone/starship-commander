@@ -4,13 +4,14 @@ using UnityEngine;
 
 public class EnemyBase : Chess
 {
-    [SerializeField] int maxHp = 10;
-    int hp = 0;
+    //[SerializeField] int maxHp = 10;
+    //int hp = 0;
     private void Start()
     {
-        hp = maxHp;
+        hitPoints = maxHitPoints;
         chessTypeName = "EnemyBase";
         camp = 1;
+        canBeHitByBullet = false;
     }
     public override void Act()
     {
@@ -27,15 +28,9 @@ public class EnemyBase : Chess
         return new List<Vector2Int>();
     }
 
-    public override void TakeDamage(int damage, Chess attacker = null, Vector2Int attackDirection = default)
+    public override void Die()
     {
-        ChessManager.instance.PushActingChess(this);
-        hp -= damage;
-        if (hp == 0)
-        {
-            Debug.Log("Enemy Base Destroyed!");
-        }
-        isActing = false;
+        Debug.Log("- Enemy Base has been destroyed -");
+        base.Die();
     }
-
 }

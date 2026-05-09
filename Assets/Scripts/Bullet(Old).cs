@@ -131,7 +131,7 @@ public class BulletOld : MonoBehaviour
         IsActive = false;
         if(shooter!=null)
         {
-            shooter.EndShoot();
+            shooter.ShootEnd();
         }
         StopAllCoroutines();
     }   

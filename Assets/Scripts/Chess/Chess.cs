@@ -26,13 +26,15 @@ public abstract class Chess : MonoBehaviour , IDamageable
     public float moveDuration = 0.001f;
     public int speed;
     public bool isActing = false;
-    public bool canBeForcedMoved = true;
+    public bool canBeHitByBullet = true;
     public int value = 0;
     [SerializeField] internal Vector2Int axisForce;
     internal int frozenTurns = 0;
     public Chess rider = null;
     internal List<ActionType> actionTypeList = new List<ActionType>() { ActionType.Enemy };
     internal int actionTypeIndex = 0;
+    [Header("UI")]
+    public UI_HP hpUI;
     public abstract void Act();
     
     public virtual void ShowRange()
@@ -70,16 +72,19 @@ public abstract class Chess : MonoBehaviour , IDamageable
         ChessManager.instance.PushActingChess(this);
         Debug.Log("Damaged! attacker = " + attacker);
         hitPoints -= damage;
+        hpUI.UpdateHP(hitPoints);
         if(hitPoints <= 0)
         {
             Die();
         }
-        isActing = false;
+        else
+            isActing = false;
     }
     public virtual void Die()
     {
         if (ChessBoard.instance[this.y, this.x] == this)
             ChessBoard.instance[this.y, this.x] = null;
+        isActing = false;
         this.gameObject.SetActive(false);
     }
     public void Freeze(int duration)
@@ -153,7 +158,12 @@ public abstract class Chess : MonoBehaviour , IDamageable
     }
     public virtual void ForcedMove()
     {
-        isActing = true;
+        if (!canMove)
+        {
+            isActing = false;
+            return;
+        }
+        ChessManager.instance.PushActingChess(this);
         Vector2Int forcedMoveTarget = GetForcedMoveTarget();
         if (forcedMoveTarget.x != x || forcedMoveTarget.y != y)
         {
@@ -187,6 +197,8 @@ public abstract class Chess : MonoBehaviour , IDamageable
 
         for (float t = 0; t < 1f; t += (Time.deltaTime / moveDuration))
         {
+            while (StageManager.isPaused) // ¿ÉÔÝÍ£
+                yield return null;
             transform.position = Vector3.Lerp(startPosition, endPosition, t);
             yield return null;
         }
@@ -216,6 +228,8 @@ public abstract class Chess : MonoBehaviour , IDamageable
         Vector3 startPosition = transform.position, endPosition = ChessBoard.GetCellCenterWorld(forcedMoveTarget);
         for(float timer = 0; timer < 1; timer += Time.deltaTime / 0.2f)
         {
+            while (StageManager.isPaused) // ¿ÉÔÝÍ£
+                yield return null;
             transform.position = Vector3.Lerp(startPosition, endPosition, -Mathf.Pow((timer - 1), 6) + 1);
             yield return null;
         }

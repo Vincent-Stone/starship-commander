@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class Bullet : MonoBehaviour
 {
-    public Chess shooter;
+    public Player shooter;
     Chess hitChess;
     Chess lastHitChess;
     [Header("速度")]
@@ -13,9 +13,20 @@ public class Bullet : MonoBehaviour
     [SerializeField] float lifeTime = 1;
     Vector2 velocity;
     Vector2Int cellPos;
-    [Header("反弹边界位置")]
-    [SerializeField] Vector2 maxBorder;
-    [SerializeField] Vector2 minBorder;
+    //[Header("反弹边界位置")]
+    Vector2 maxBorder
+    {
+      get{
+            return new Vector2(4.5f, 5 - 9 + ChessManager.instance.highestRow);
+        }
+    }
+    Vector2 minBorder
+    {
+        get
+        {
+            return new Vector2(-4.5f, -5 - 9 + ChessManager.instance.highestRow);
+        }
+    }
     [Header("Debug")]
     [SerializeField] Vector2 debugVelocity;
     
@@ -55,7 +66,7 @@ public class Bullet : MonoBehaviour
             debugVelocity = velocity;
             cellPos = ChessBoard.GetCell(transform.position);
             hitChess = ChessBoard.GetChess(cellPos);
-            if(hitChess != null && hitChess.canBeForcedMoved)
+            if(hitChess != null && hitChess.canBeHitByBullet)
             {
                 if(hitChess != shooter || lastHitChess != shooter && hitChess == shooter)
                 {
@@ -73,7 +84,7 @@ public class Bullet : MonoBehaviour
             velocity *= 1.001f;
             yield return null;
         }
-        shooter.ActEnd();
+        shooter.ShootEnd();
         this.gameObject.SetActive(false);
     }
 
@@ -84,13 +95,13 @@ public class Bullet : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (maxBorder.x < minBorder.x || maxBorder.y < minBorder.y)
-            Gizmos.color = Color.red;
-        else
-            Gizmos.color = Color.green;
-        Gizmos.DrawLine(maxBorder + Vector2.left * 100, maxBorder + Vector2.right * 100);
-        Gizmos.DrawLine(maxBorder + Vector2.up * 100, maxBorder + Vector2.down * 100);
-        Gizmos.DrawLine(minBorder + Vector2.left * 100, minBorder + Vector2.right * 100);
-        Gizmos.DrawLine(minBorder + Vector2.up * 100, minBorder + Vector2.down * 100);
+        //if (maxBorder.x < minBorder.x || maxBorder.y < minBorder.y)
+        //    Gizmos.color = Color.red;
+        //else
+        //    Gizmos.color = Color.green;
+        //Gizmos.DrawLine(maxBorder + Vector2.left * 100, maxBorder + Vector2.right * 100);
+        //Gizmos.DrawLine(maxBorder + Vector2.up * 100, maxBorder + Vector2.down * 100);
+        //Gizmos.DrawLine(minBorder + Vector2.left * 100, minBorder + Vector2.right * 100);
+        //Gizmos.DrawLine(minBorder + Vector2.up * 100, minBorder + Vector2.down * 100);
     }
 }

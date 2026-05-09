@@ -118,6 +118,8 @@ public abstract class MovableEnemy : Chess
         y += dy;
         for(float t = 0; t < moveDuration; t += Time.deltaTime)
         {
+            while (StageManager.isPaused) // ¿ÉÔÝÍ£
+                yield return null;
             transform.position = Vector3.Lerp(startPosition, endPosition, t / moveDuration);
             yield return null;
         }

@@ -34,7 +34,7 @@ public class ChessManager : MonoBehaviour
     [SerializeField] Vector3Int cellPosition;
     public Tilemap tilemap;
     Vector2 shootDirection;
-    [SerializeField] string chessDataPath = "Assets/LO/01.txt";
+    public string chessDataPath = "Assets/LO/01.txt";
     [SerializeField] Player player = null;
     [SerializeField] Chess select = null;
     [Header("基地和卷轴")]
@@ -259,7 +259,9 @@ public class ChessManager : MonoBehaviour
             chess.Act();
             while (haveActingChess())
             {
-                while(haveActingChess() && !PeekActingChess().isActing)
+                while (StageManager.isPaused) // 可暂停
+                    yield return null;
+                while (haveActingChess() && !PeekActingChess().isActing)
                     PopActingChess();
                 yield return null;
             }
@@ -267,11 +269,15 @@ public class ChessManager : MonoBehaviour
             {
                 continue;
             }
+            if (StageManager.isBossStage) // BOSS战无第二次行动
+                continue;
             //第二次行动
             PushActingChess(chess);
             chess.Act();
             while (haveActingChess())
             {
+                while (StageManager.isPaused) // 可暂停
+                    yield return null;
                 while (haveActingChess() && !PeekActingChess().isActing)
                     PopActingChess();
                 yield return null;

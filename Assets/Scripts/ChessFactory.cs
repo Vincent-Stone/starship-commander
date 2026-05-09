@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class ChessFactory : MonoBehaviour
 {
-    static GameObject Pawn,Knight,Rook,Cannon;
+    static GameObject Pawn,Knight,Rook,Cannon,EnemyBase;
     public static void Init()
     {
         Debug.Log("Init ChessFactory");
@@ -14,6 +14,7 @@ public class ChessFactory : MonoBehaviour
         Knight = Resources.Load("Prefabs/Knight") as GameObject;
         Rook = Resources.Load("Prefabs/Rook") as GameObject;
         Cannon = Resources.Load("Prefabs/Cannon") as GameObject;
+        EnemyBase = Resources.Load("Prefabs/EnemyBase") as GameObject;
         if (Pawn == null && Knight == null && Rook == null && Cannon == null)
         {
             Debug.LogError("Failed to load Chess prefabs. Please check the path and prefab names.");
@@ -37,6 +38,9 @@ public class ChessFactory : MonoBehaviour
                 break;
             case 'c':
                 chessObject = Instantiate(Cannon, Vector3.zero, Quaternion.identity);
+                break;
+            case 'E':
+                chessObject = Instantiate(EnemyBase, Vector3.zero, Quaternion.identity);
                 break;
         }
         if (chessObject != null)

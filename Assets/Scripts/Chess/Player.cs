@@ -17,7 +17,8 @@ public class Player : Chess
         //HeavyPunch,
         Shoot,
         //LongShot
-        Enemy
+        Enemy,
+        Null
     }
     [SerializeField] Bullet bullet;
     [SerializeField] UI_DataPanel dataPanel;
@@ -61,10 +62,15 @@ public class Player : Chess
     public Vector2Int mouseCellPosition;
     Vector2Int lastMouseCellPosition;
     public Chess selectedChess = null;
+
+    //教程提示记录
+    bool isFirstTurn = true;
     public void InitPlayer()
     {
         Debug.Log("Init Player");
         StopAllCoroutines();
+        if (StageManager.stageIndex > 1)
+            isFirstTurn = false;
         actionTypeName.text = defaultActionTypeName;
         shootArrowTransform.gameObject.SetActive(false);
         actionPoints = maxActionPoints;
@@ -87,9 +93,7 @@ public class Player : Chess
         chessTypeName = "Player";
         blockSign.color = Color.clear;
         hitPoints = maxLifePoints;
-        //if(baseChess != null)
-        //    rideOnName.text = baseChess.chessTypeName;
-        //weapon = new Weapon(new ActionType[] { ActionType.Punch});
+        hpUI.UpdateHP(hitPoints);
         SetSelectedChess(null);
     }
 
@@ -127,6 +131,7 @@ public class Player : Chess
             }
             return;
         }
+        actionType = ActionType.Null;
         actionTypeName.text = defaultActionTypeName;
     }
     public void SetActionType( int type)
@@ -140,7 +145,7 @@ public class Player : Chess
         this.rideOn = newRideOn;
         newRideOn.transform.parent = this.transform;
         newRideOn.rider = this;
-        //rideOnName.text = rideOn.chessTypeName;
+        //rideOnName.textmeshContent = rideOn.chessTypeName;
     }
 
     public void DropRideOn()
@@ -150,7 +155,7 @@ public class Player : Chess
         rideOn.transform.parent = ChessManager.instance.transform;
         rideOn = null;
 
-        //rideOnName.text = "Space";
+        //rideOnName.textmeshContent = "Space";
     }
 
     public override void Act()
@@ -170,6 +175,12 @@ public class Player : Chess
 
     public void PlayerTurnStart()
     {
+        if (isFirstTurn)
+        {
+            string[] testTexts = { "欢迎", "游戏开始", "Beat Them Up", "祝好运" };
+            StageManager.instance.OpenWindow(testTexts);
+            isFirstTurn = false;
+        }
         Debug.Log("Player Turn Start");
         if (!isInPlayerTurn)
         {
@@ -202,6 +213,8 @@ public class Player : Chess
     {
         while (isInPlayerTurn && actionPoints> 0)
         {
+            while(StageManager.isPaused) // 可暂停
+                yield return null;
             mouseWorldPosition = sceneCamera.ScreenToWorldPoint(Input.mousePosition);
             mouseCellPosition = ChessBoard.GetCell(mouseWorldPosition);
             if(lastMouseCellPosition != mouseCellPosition)
@@ -209,9 +222,12 @@ public class Player : Chess
                 lastMouseCellPosition = mouseCellPosition;
                 OnUpdateMouseCellPosition();
             }
-            if (Input.GetMouseButtonDown(0) && !ChessManager.instance.haveActingChess() && !isActing)
+            if(!ChessManager.instance.haveActingChess() && !isActing)
             {
-                OnClicked();
+                if (Input.GetMouseButtonDown(0) && ChessBoard.IsInView(mouseCellPosition.x, mouseCellPosition.y) && !ChessManager.instance.haveActingChess() && !isActing)
+                {
+                    OnClicked();
+                }
             }
             while (ChessManager.instance.haveActingChess())
             {
@@ -233,6 +249,7 @@ public class Player : Chess
             DropRideOn();
             ChessBoard.instance[y, x] = baseChess;
         }
+        yield return new WaitForSeconds(0.5f);
         while (true)
         {
             mouseWorldPosition = sceneCamera.ScreenToWorldPoint(Input.mousePosition);
@@ -245,6 +262,7 @@ public class Player : Chess
                     x = mouseCellPosition.x;
                     y = mouseCellPosition.y;
                     ChessBoard.instance[y, x] = this;
+                    yield return null;
                     break;
                 }
             }
@@ -290,9 +308,21 @@ public class Player : Chess
 
     void OnUpdateMouseCellPosition()
     {
-        if(actionType == ActionType.Shoot && ChessBoard.IsInView(mouseCellPosition.x, mouseCellPosition.y))
+        if(actionType == ActionType.Shoot)
         {
-            shootArrowTransform.up = (Vector2)(mouseCellPosition - cellPosition);
+            if(ChessBoard.IsInView(mouseCellPosition.x, mouseCellPosition.y) && mouseCellPosition != cellPosition)
+            {
+                shootArrowTransform.gameObject.SetActive(true);
+                shootArrowTransform.up = (Vector2)(mouseCellPosition - cellPosition);
+            }
+            else
+            {
+                shootArrowTransform.gameObject.SetActive(false);
+            }
+        }
+        else
+        {
+            shootArrowTransform.gameObject.SetActive(false);
         }
     }
 
@@ -322,6 +352,7 @@ public class Player : Chess
                     {
                         //Debug.Log("移动");
                         ConsumeActionPoints();
+                        ChessBoard.instance.HideRange();
                         ChessManager.instance.PushActingChess(this);
                         A_Move(mouseCellPosition.x - x, mouseCellPosition.y - y);
                     }
@@ -329,6 +360,7 @@ public class Player : Chess
                     {
                         //Debug.Log("移动");
                         ConsumeActionPoints();
+                        ChessBoard.instance.HideRange();
                         ChessManager.instance.PushActingChess(baseChess);
                         baseChess.A_Move(mouseCellPosition.x - baseChess.x, mouseCellPosition.y - baseChess.y, actionPoints);
                         //A_Move(mouseCellPosition.x - x, mouseCellPosition.y - y);
@@ -340,6 +372,7 @@ public class Player : Chess
                     {
                         //Debug.Log("攻击");
                         ConsumeActionPoints();
+                        ChessBoard.instance.HideRange();
                         ChessManager.instance.PushActingChess(this);
                         A_Punch(mouseCellPosition.x - x, mouseCellPosition.y - y);
                     }
@@ -355,7 +388,7 @@ public class Player : Chess
                     }
                 }
             }
-            else if(actionType == ActionType.Shoot)
+            else if(actionType == ActionType.Shoot && cellPosition != mouseCellPosition)
             {
                 //Debug.Log("射击");
                 ConsumeActionPoints();
@@ -370,6 +403,8 @@ public class Player : Chess
     }
     void SetSelectedChess(Chess selected)
     {
+        if(StageManager.isBossStage && selected == baseChess)
+            { return; }
         if(selectedChess != null)
             ChessBoard.instance.HideRange();
         selectedChess = selected;
@@ -381,6 +416,7 @@ public class Player : Chess
         }
         else
         {
+            ChangeActionType();
             actionTypeName.text = defaultActionTypeName;
         }
     }
@@ -478,11 +514,19 @@ public class Player : Chess
     {
         return GetShootRange();
     }
-    public void A_ActEnd()
+    public IEnumerator A_ActEnd()
     {
-        if (actionPoints > 0)
-            ShowRange();
         isActing = false;
+        while(ChessManager.instance.haveActingChess())
+        {
+            yield return null;
+        }
+        if (actionPoints > 0)
+        {
+            if(actionType == ActionType.Shoot)
+                shootArrowTransform.gameObject.SetActive(true);
+            ShowRange();
+        }
     }
     public void A_Move(int dx,int dy)
     {
@@ -509,7 +553,7 @@ public class Player : Chess
             SetRideOn(baseChess);
         }
         ChessBoard.instance[y,x] = this;
-        A_ActEnd();
+        StartCoroutine(A_ActEnd());
     }
     
     public void A_Punch(int dx, int dy)
@@ -517,9 +561,9 @@ public class Player : Chess
         Chess target = ChessBoard.instance[y + dy, x + dx];
         if (target != null && target.camp != camp)
         {
-            target.TakeDamage(10, this, new Vector2Int(dx, dy));
+            target.TakeDamage(1, this, new Vector2Int(dx, dy));
         }
-        A_ActEnd();
+        StartCoroutine(A_ActEnd());
     }
 
     public void A_Ride(int dx, int dy)
@@ -552,21 +596,21 @@ public class Player : Chess
         }
         if(dropedRideOn != null && dropedRideOn != baseChess)
             dropedRideOn.TakeDamage(1, this, new Vector2Int(dx, dy));
-        A_ActEnd();
+        StartCoroutine(A_ActEnd());
     }
     public IEnumerator Shoot(int targetX, int targetY)
     {
         Debug.Log("Player Shoot");
+        shootArrowTransform.gameObject.SetActive(false);
         bullet.gameObject.SetActive(true);
         bullet.shooter = this;
         bullet.Shoot(new Vector2(targetX, targetY).normalized);
-        yield return null;
+        yield break;
     }
 
-    public void EndShoot()
+    public void ShootEnd()
     {
-        Debug.Log("Player End Shoot");
-        isActing = false;
+        StartCoroutine(A_ActEnd());
     }
 
     public override void TakeDamage(int damage, Chess attacker = null, Vector2Int attackDirection = new Vector2Int())
@@ -574,16 +618,16 @@ public class Player : Chess
         //if(!isDead)
         //    isDead = true;
         ChessManager.instance.PushActingChess(this);
-        StartCoroutine(Damaged(attackDirection));
+        StartCoroutine(Damaged(damage, attacker, attackDirection));
     }
 
-    IEnumerator Damaged(Vector2Int attackDirection)//受击效果
+    IEnumerator Damaged(int damage, Chess attacker = null, Vector2Int attackDirection = new Vector2Int())//受击效果
     {
         bool isBlocked = false;
         blockSign.color = Color.yellow;
         for (float t = 0; t < qteTimeWindow; t += Time.deltaTime)
         {
-            if(Input.GetMouseButtonDown(0))
+            if (Input.GetMouseButtonDown(0))
             {
                 isBlocked = true;
                 blockSign.color = Color.green;
@@ -594,7 +638,7 @@ public class Player : Chess
         if (isBlocked) 
         {
             Debug.Log("格挡成功");
-            //yield return new WaitForSeconds(0.2f);
+            yield return new WaitForSeconds(0.2f);
             AddForce(attackDirection);
             ForcedMove();
             blockSign.color = Color.clear;
@@ -603,6 +647,7 @@ public class Player : Chess
         else
         {
             blockSign.color = Color.red;
+            hitPoints -= damage;
             Debug.Log("格挡失败");
             yield return new WaitForSeconds(0.2f);
             blockSign.color = Color.clear;
@@ -613,6 +658,7 @@ public class Player : Chess
             yield return null;
         }
         transform.rotation = Quaternion.identity;
+        hpUI.UpdateHP(hitPoints);
         isActing = false;
     }
     public override void ForcedMove()
@@ -620,6 +666,7 @@ public class Player : Chess
         Vector2Int forcedMoveTarget = GetForcedMoveTarget();
         if (forcedMoveTarget == new Vector2(x, y))
         {
+            isActing = false;
             return;
         }
         if (rideOn)
