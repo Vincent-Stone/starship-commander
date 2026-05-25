@@ -165,7 +165,7 @@ public class BulletOld : MonoBehaviour
             return -1;
         } 
         Vector2 dispalcemant = currentPosition - lastPosition;
-        //if(currentPosition.x > minBorder.x && currentPosition.x < maxBorder.x)
+        //if(currentPosition.x > MinBorder.x && currentPosition.x < MaxBorder.x)
         //{
         //    if(currentPosition.y > 0)
         //    {
@@ -177,7 +177,7 @@ public class BulletOld : MonoBehaviour
         //        return (int)Direction.Down;
         //    }
         //}
-        //else if(currentPosition.y > minBorder.y && currentPosition.y < maxBorder.y)
+        //else if(currentPosition.y > MinBorder.y && currentPosition.y < MaxBorder.y)
         //{
         //    if (currentPosition.x > 0)
         //    {

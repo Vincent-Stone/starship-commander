@@ -1,19 +1,30 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class Cannon : Chess
 {
+    [Header("加农")]
     [SerializeField] int fullEnergy = 2;
+    public Transform lazerSpriteTransform;
+    public float lazerShootDuration;
+    public float lazerEndDuration;
+    [Header("音频")]
+    public AudioSource fireSoundSource;
     int energy = 0;
     bool isAttackPhase = true; // 用于区分攻击阶段和移动阶段
     Chess attackTarget; // 记录当前攻击目标
+    
     void Start()
     {
         camp = 1; // 设置为敌人阵营
         canBeRiden = false;
         canMove = false; // Cannon不能移动
         value = 3; // 设置一个合适的value值
+        chessTypeName = "Cannon";
+        chessName = "加农";
+        chessInfo = "由融合炉改造而成的自动武器，每充能两回合发射一次。外壳脆弱，被击伤后会发生殉爆，对前后左右的物体造成伤害。";
         hitPoints = maxHitPoints; // Cannon只有一点血量
         hpUI.UpdateHP(hitPoints);
     }
@@ -22,10 +33,20 @@ public class Cannon : Chess
     {
         if (frozenTurns > 0)
         {
-            frozenTurns--;
             isActing = false;
+            if (isAttackPhase)
+            {
+                ice.enabled = true;
+                frozenTurns--;
+                isAttackPhase = false;
+            }
+            else
+            {
+                isAttackPhase = true;
+            }
             return;
         }
+        ice.enabled = false;
 
         if (isAttackPhase)
         {
@@ -69,9 +90,32 @@ public class Cannon : Chess
     {
         isActing = true;
         // 这里可以添加攻击动画效果
-        yield return new WaitForSeconds(0.2f);
+        float dy = 0;
+        if (attackTarget == null)
+            dy = y + 1;
+        else
+            dy = Mathf.Abs(y - attackTarget.y);
+        fireSoundSource.Play();
+        for (float t = 0; t < dy; t += Time.deltaTime / lazerShootDuration)
+        {
+            lazerSpriteTransform.localScale = new Vector3(lazerSpriteTransform.localScale.x, t, 1);
+            lazerSpriteTransform.localPosition = new Vector3(0, -t / 2, 10);
+            yield return null;
+        }
+        lazerSpriteTransform.localScale = new Vector3(lazerSpriteTransform.localScale.x, dy, 1);
+        lazerSpriteTransform.localPosition = new Vector3(0, -dy / 2, 10);
+        
         if(attackTarget != null)
             attackTarget.TakeDamage(1, this, new Vector2Int(0, -1));
+
+        float lazerWidth = lazerSpriteTransform.localScale.x;
+        for (float t = 1; t > 0; t -= Time.deltaTime / lazerEndDuration)
+        {
+            lazerSpriteTransform.localScale = new Vector3(lazerWidth * t, dy, 1);
+            yield return null;
+        }
+        lazerSpriteTransform.localScale = new Vector3(lazerWidth, 0, 1);
+        lazerSpriteTransform.localPosition = new Vector3(0, 0, 10);
         isActing = false;
     }
 
@@ -85,10 +129,10 @@ public class Cannon : Chess
             range.Add(new Vector2Int(x, targetY));
 
             Chess target = ChessBoard.GetChess(new Vector2Int(x, targetY));
-            if (target != null)
+            if (target != null && target.camp != camp)
             {
                 attackTarget = target; // 记录攻击目标
-                break; // 碰到第一个棋子就停止
+                break; // 碰到第一个非敌方棋子就停止
             }
                 targetY--;
         }

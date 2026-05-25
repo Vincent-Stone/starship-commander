@@ -9,9 +9,11 @@ public class UI_PopUpWindow : MonoBehaviour
     public Animator animator;
     public bool isPlaying = false;
     public bool isOpen = false;
+    public AudioSource openAudioSource;
     private void Start()
     {
         animator = GetComponent<Animator>();
+        openAudioSource = GetComponent<AudioSource>();
     }
     public void Close()
     {
@@ -30,6 +32,7 @@ public class UI_PopUpWindow : MonoBehaviour
     {
         if (isPlaying || isOpen)
             return;
+        openAudioSource.Play();
         isPlaying = true;
         textmeshContent.text = text;
         animator.Play("µ¯³ö´°¿Ú");

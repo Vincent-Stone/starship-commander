@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices.WindowsRuntime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class StartMenuBehavior : MonoBehaviour
 {
     [SerializeField] AudioSource audioSource1;
     [SerializeField] AudioSource audioSource2;
     [SerializeField] string musicInfo;
+    public Image fadeInImage;
 
     [Range(0,1)]
     [SerializeField] float panStereoDistance = 1.0f;
@@ -16,6 +18,7 @@ public class StartMenuBehavior : MonoBehaviour
     [SerializeField] float panStereoSpeed = 1.0f;
     [Range(0, 10)]
     [SerializeField] float fadeOutTime = 1.0f;
+    [SerializeField] float fadeInTime = 1.0f;
     string as1IsPlayeing { 
         get {
             if (audioSource1.isPlaying)
@@ -47,6 +50,14 @@ public class StartMenuBehavior : MonoBehaviour
     }
     IEnumerator StartMenuCoroutine()
     {
+        for (float t = 1; t > 0; t -= Time.deltaTime / fadeInTime)
+        {
+            Color color = fadeInImage.color;
+            color.a = t;
+            fadeInImage.color = color;
+            yield return null;
+        }
+        fadeInImage.gameObject.SetActive(false);
         while (true)
         {
             if(Input.anyKeyDown)
@@ -79,12 +90,18 @@ public class StartMenuBehavior : MonoBehaviour
         else
             audioSourcePlaying = audioSource2;
         float startVolume = audioSourcePlaying.volume;
+        fadeInImage.color = new Color(fadeInImage.color.r, fadeInImage.color.g, fadeInImage.color.b, 0);
+        fadeInImage.gameObject.SetActive(true);
         if (audioSourcePlaying != null)
             for (float i = 0; i < 1; i += Time.deltaTime / fadeOutTime)
             {
                 audioSourcePlaying.volume = (1 - i) * startVolume;
+                Color color = fadeInImage.color;
+                color.a = i;
+                fadeInImage.color = color;
                 yield return null;
             }
+        fadeInImage.color = new Color(fadeInImage.color.r, fadeInImage.color.g, fadeInImage.color.b, 1);
         audioSourcePlaying.Stop();
         SceneManager.LoadSceneAsync("Battle Scene");
     }

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Tilemaps;
@@ -21,8 +22,9 @@ public class ChessManager : MonoBehaviour
     //    BattlePhase
     //}
     //public GameState gameState = GameState.MainPhase;
+    public bool restarted = false;
     [SerializeField] List<Chess> chessList;
-    List<Chess> chessPrepareToActList;
+    [SerializeField] List<Chess> chessPrepareToActList;
     Stack<Chess> actingChessStack;
     [Header("棋盘")]
     [SerializeField] Vector2Int boardSize = new Vector2Int(9, 10);
@@ -30,6 +32,7 @@ public class ChessManager : MonoBehaviour
     public GameObject chessBoardRange;
     public GameObject attackRange;
     public GameObject moveRange;
+    public Transform bossAreaLine;
     [SerializeField] Vector3 mousePosition;
     [SerializeField] Vector3Int cellPosition;
     public Tilemap tilemap;
@@ -45,6 +48,8 @@ public class ChessManager : MonoBehaviour
     [SerializeField] string testMassage;
     public void Init()
     {
+        StopAllCoroutines();
+        highestRow = 9;
         Debug.Log("Init ChessManager");
         if (chessBoardRange == null || attackRange == null || moveRange == null)
         {
@@ -101,6 +106,7 @@ public class ChessManager : MonoBehaviour
             chessBoard.attackRangeParent = attackRange.transform;
         }
         chessBoard.Init(boardSize.y, boardSize.x, this);
+        bossAreaLine.transform.position = new Vector3(0, ChessBoard.tilemap.GetCellCenterWorld(new(boardSize.x / 2, ChessBoard.instance.rowNum - 1, 0)).y - 4.5f, 0);
         for (int i = boardSize.y - 1; i >= 0; i--)
         {
             line = reader.ReadLine();
@@ -144,9 +150,15 @@ public class ChessManager : MonoBehaviour
         Debug.Log("PlaceBase");
         if (baseChess != null)
         {
+            baseChess.cellPosition = new(boardSize.x / 2, 0);
             baseChess.InitBaseAndPlayer();
             player = Player.instance;
+            //string[] testTexts = {
+            //    $"<size=100>STAGE-{StageManager.stageIndex}</size>",
+            //};
+            //StageManager.instance.OpenWindow(testTexts);
             player.PlayerTurnStart();
+            StageManager.isInited = true;
         }
     }
     public void UpdateChessList()
@@ -170,7 +182,8 @@ public class ChessManager : MonoBehaviour
                     Chess chess = chessBoard[i, j];
                     if (chess != null && chess.camp != player.camp)
                     {
-                        chessList.Add(chess);
+                        if(chessList.Find(c => c == chess) == null)
+                            chessList.Add(chess);
                     }
                 }
             }
@@ -249,10 +262,10 @@ public class ChessManager : MonoBehaviour
                     index = i;
                 }
             }
-            if (index == -1 || chess == null)
-                continue;
             chessPrepareToActList.RemoveAt(index);
-
+            if (index == -1 || chess == null || chess.rider != null)
+                continue;
+            //yield return null;
             //每个敌方棋子行动两次
             //第一次行动
             PushActingChess(chess);
@@ -265,6 +278,11 @@ public class ChessManager : MonoBehaviour
                     PopActingChess();
                 yield return null;
             }
+            //if (restarted)
+            //{
+            //    restarted = false;
+            //    break;
+            //}
             if (!chess.gameObject.activeSelf)
             {
                 continue;
@@ -287,7 +305,7 @@ public class ChessManager : MonoBehaviour
     }
 
     [Header("测试")]
-    [SerializeField] string chessBoardStr;
+    public string chessBoardStr;
     private void Update()
     {
         chessBoardStr = "";

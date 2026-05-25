@@ -177,7 +177,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 786576289372504487}
-  - component: {fileID: 6161562313330897521}
   m_Layer: 0
   m_Name: Pawn
   m_TagString: Untagged
@@ -202,28 +201,3 @@ Transform:
   - {fileID: 1516430833848483595}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &6161562313330897521
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7525561208216106475}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e28e485c4e113a841ae674e1aa52bef0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  chessTypeName: Chess
-  camp: -1
-  canBeRiden: 0
-  canMove: 1
-  x: 0
-  y: 0
-  moveDuration: 0.1
-  speed: 10
-  isActing: 0
-  canBeForcedMoved: 1
-  value: 0
-  axisForce: {x: 0, y: 0}
-  rider: {fileID: 0}

@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Rendering;
 using ActionType = Player.ActionType;
@@ -22,28 +23,45 @@ public abstract class Chess : MonoBehaviour , IDamageable
     public int y;
     public int maxHitPoints = 1;
     public int hitPoints = 1;
-    public Vector2Int cellPosition { get { return new Vector2Int(x, y); } }
+    public Vector2Int cellPosition { 
+        get 
+        { 
+            return new Vector2Int(x, y);
+        }
+        set
+        {
+            x = value.x;
+            y = value.y;
+        }
+    }
     public float moveDuration = 0.001f;
     public int speed;
     public bool isActing = false;
     public bool canBeHitByBullet = true;
     public int value = 0;
     [SerializeField] internal Vector2Int axisForce;
-    internal int frozenTurns = 0;
+    public int frozenTurns;
     public Chess rider = null;
     internal List<ActionType> actionTypeList = new List<ActionType>() { ActionType.Enemy };
     internal int actionTypeIndex = 0;
+    [Header("精灵")]
+    public Transform sprite;
     [Header("UI")]
     public UI_HP hpUI;
+    public SpriteRenderer ice;
+    [Header("信息")]
+    public Sprite chessPicture;
+    internal string chessName;
+    internal string chessInfo;
+    [Header("动画曲线")]
+    public static AnimationCurve forcedMoveCurve = null;
     public abstract void Act();
-    
     public virtual void ShowRange()
     {
         ChessBoard.instance.HideRange();
         ChessBoard.instance.ShowRange(GetMoveRange(), new Color(0, 1, 0, 0.8f), true);
         ChessBoard.instance.ShowRange(GetAttackRange(), new Color(1, 0, 0, 0.8f), false);
     }
-    
     public bool IsInRange(Vector2Int pos)
     {
         if (ChessBoard.IsOnBoard(pos.x, pos.y))
@@ -73,7 +91,26 @@ public abstract class Chess : MonoBehaviour , IDamageable
         Debug.Log("Damaged! attacker = " + attacker);
         hitPoints -= damage;
         hpUI.UpdateHP(hitPoints);
-        if(hitPoints <= 0)
+        StartCoroutine(Damaged(damage, attacker, attackDirection));
+    }
+    public virtual IEnumerator Damaged(int damage, Chess attacker = null, Vector2Int attackDirection = new Vector2Int())
+    {
+        Vector3 startPosition = transform.position;
+        Vector3 forcedDirction = (Vector2)attackDirection;
+        forcedDirction = forcedDirction.normalized * 0.2f;
+        for (float t = 0; t < 1; t += Time.deltaTime / 0.05f)
+        {
+            transform.position = startPosition + forcedDirction * forcedMoveCurve.Evaluate(t);
+            yield return null;
+        }
+        for (float t = 1; t > 0f; t -= Time.deltaTime / 0.05f)
+        {
+            transform.position = startPosition + forcedDirction * forcedMoveCurve.Evaluate(t);
+            yield return null;
+        }
+        yield return new WaitForSeconds(0.2f);
+        transform.position = startPosition;
+        if (hitPoints <= 0)
         {
             Die();
         }
@@ -87,11 +124,34 @@ public abstract class Chess : MonoBehaviour , IDamageable
         isActing = false;
         this.gameObject.SetActive(false);
     }
-    public void Freeze(int duration)
+    public void Freeze(int value)
     {
-        if (frozenTurns < duration)
-            frozenTurns = duration;
+        if (frozenTurns < value)
+            frozenTurns = value;
+        if(frozenTurns > 0)
+        {
+            ice.enabled = true;
+        }
     }
+    public void Unfreeze()
+    {
+        if (frozenTurns > 0)
+            frozenTurns--;
+        if(frozenTurns == 0)
+        {
+            ice.enabled = false;
+        }
+    }
+    public void Unfreeze(int value)
+    {
+        if (frozenTurns > value)
+            frozenTurns = value;
+        if (frozenTurns == 0)
+        {
+            ice.enabled = false;
+        }
+    }
+
     public void AddForce(Vector2 force)
     {
         force.Normalize();
@@ -182,7 +242,7 @@ public abstract class Chess : MonoBehaviour , IDamageable
 
     internal virtual bool CanMoveTo(int targetX, int targetY)
     {
-        if (ChessBoard.IsOnBoard(targetX, targetY) && (ChessBoard.instance[targetY, targetX] == null 
+        if (ChessBoard.IsOnBoard(targetX, targetY) && ChessBoard.IsInView(targetX,targetY) && (ChessBoard.instance[targetY, targetX] == null 
             || ChessBoard.instance[targetY, targetX].camp != this.camp))
         {
             return true;
@@ -194,7 +254,12 @@ public abstract class Chess : MonoBehaviour , IDamageable
     {
         Vector3 startPosition = transform.position;
         Vector3 endPosition = transform.position + new Vector3(dx, dy);
-
+        Chess moveTarget = ChessBoard.instance[this.y + dy, this.x + dx];
+        if (ChessBoard.instance[this.y, this.x] == this)
+            ChessBoard.instance[this.y, this.x] = null;
+        x += dx;
+        y += dy;
+        ChessBoard.instance[this.y, this.x] = this;
         for (float t = 0; t < 1f; t += (Time.deltaTime / moveDuration))
         {
             while (StageManager.isPaused) // 可暂停
@@ -203,18 +268,19 @@ public abstract class Chess : MonoBehaviour , IDamageable
             yield return null;
         }
         transform.position = endPosition;
-        Chess moveTarget = ChessBoard.instance[this.y + dy, this.x + dx];
-        if (ChessBoard.instance[this.y, this.x] == this)
-            ChessBoard.instance[this.y, this.x] = null;
-        x += dx;
-        y += dy;
-        ChessBoard.instance[this.y, this.x] = this;
-        if (moveTarget != null)
+        isActing = false;
+    }
+
+    public virtual IEnumerator MoveCoroutine(Vector3 startPosition, Vector3 endPosition)
+    {
+        for (float t = 0; t < 1f; t += (Time.deltaTime / moveDuration))
         {
-            moveTarget.TakeDamage(1, this, new Vector2Int(dx, dy));
-            isActing = false;
-            yield break;
+            while (StageManager.isPaused) // 可暂停
+                yield return null;
+            transform.position = Vector3.Lerp(startPosition, endPosition, t);
+            yield return null;
         }
+        transform.position = endPosition;
         isActing = false;
     }
 
@@ -223,7 +289,7 @@ public abstract class Chess : MonoBehaviour , IDamageable
         this.axisForce = axisForce;
         ForcedMove();
     }
-    IEnumerator ForcedMovingCoroutine (Vector2Int forcedMoveTarget)
+    internal IEnumerator ForcedMovingCoroutine (Vector2Int forcedMoveTarget)
     {
         Vector3 startPosition = transform.position, endPosition = ChessBoard.GetCellCenterWorld(forcedMoveTarget);
         for(float timer = 0; timer < 1; timer += Time.deltaTime / 0.2f)
@@ -236,10 +302,14 @@ public abstract class Chess : MonoBehaviour , IDamageable
         transform.position = endPosition;
         isActing = false;
     }
-    bool CanForcedMoveTo(int targetX, int targetY)
+    internal virtual bool CanForcedMoveTo(int targetX, int targetY)
     {
-        if(ChessBoard.IsOnBoard(targetX, targetY) && ChessBoard.instance[targetY, targetX] == null)
+        if(ChessBoard.IsInView(targetX, targetY) && ChessBoard.instance[targetY, targetX] == null)
         {
+            if(this == Player.instance)
+            {
+                return targetY + 1 < ChessBoard.instance.bossAreaLine || StageManager.isBossStage;
+            }
             return true;
         }
         return false;

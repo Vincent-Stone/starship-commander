@@ -21,6 +21,7 @@ public class ChessBoard
     public static ChessBoard instance = null;
     public ChessManager chessManager = null;
     public static Tilemap tilemap;
+    public int bossAreaLine => rowNum - 5;
     public void Init(int rowNum, int colNum, ChessManager chessManager)
     {
         Debug.Log("Init ChessBoard");
@@ -70,13 +71,13 @@ public class ChessBoard
                 rangeSprites[i, j].transform.parent = chessManager.chessBoardRange.transform;
                 attackRangeSprites[i, j].transform.parent = chessManager.attackRange.transform;
                 moveRangeSprites[i, j].transform.parent = chessManager.moveRange.transform;
-                rangeSprites[i, j].color = new Color(1, 1, 1, 0.1f); // Set initial transparency to 0
+                rangeSprites[i, j].color = new Color(1, 1, 1, 0.5f); // Set initial transparency to 0
                 attackRangeSprites[i, j].color = new Color(1, 1, 1, 0); // Set initial transparency to 0
                 moveRangeSprites[i, j].color = new Color(1, 1, 1, 0); // Set initial transparency to 0
             }
         }
     }
-    void ClearChessBoard()
+    public void ClearChessBoard()
     {
         Debug.Log("Clear ChessBoard");
         if (chessBoard == null)
@@ -189,6 +190,20 @@ public class ChessBoard
         }
         return null;
     }
+    /// <summary>
+    /// 获取指定位置的棋子。
+    /// </summary>
+    /// <param name="x">单元格位置的列索引（x坐标）。</param>
+    /// <param name="y">单元格位置的行索引（y坐标）。</param>
+    /// <returns>如果单元格在棋盘内且上单元格位置有棋子则返回该棋子，否则返回 null。</returns>
+    public static Chess GetChess(int x,int y)
+    {
+        if (IsOnBoard(x, y))
+        {
+            return chessBoard[y, x];
+        }
+        return null;
+    }
     public static Vector3 GetCellCenterWorld(int row, int col)
     {
         return tilemap.GetCellCenterWorld(new Vector3Int(col, row, 0));
@@ -225,6 +240,15 @@ public class ChessBoard
         return x >= 0 && x < instance.colNum && y >= 0 && y < instance.rowNum;
     }
     /// <summary>
+    /// 判断指定位置是否在棋盘上。
+    /// </summary>
+    /// <param name="cellPos">单元格位置。</param>
+    /// <returns>如果单元格在棋盘上则返回 true，否则返回 false。</returns>
+    public static bool IsOnBoard(Vector2Int cellPos)
+    {
+        return IsOnBoard(cellPos.x, cellPos.y);
+    }
+    /// <summary>
     /// 判断指定位置是否在可视区域内。
     /// </summary>
     /// <param name="x">单元格位置的列索引（x坐标）。</param>
@@ -233,5 +257,37 @@ public class ChessBoard
     public static bool IsInView(int x,int y)
     {
         return x >= 0 && x < instance.colNum && y >= ChessManager.instance.basePosition.y && y <= ChessManager.instance.highestRow;
+    }
+    /// <summary>
+    /// 判断指定位置是否在可视区域内。
+    /// </summary>
+    /// <param name="cellPos">单元格位置。</param>
+    /// <returns>如果单元格在可视区域内则返回 true，否则返回 false。</returns>
+    public static bool IsInView(Vector2Int cellPos)
+    {
+        return IsInView(cellPos.x, cellPos.y);
+    }
+    public static Vector2Int ClampInView(Vector2Int cellPos)
+    {
+        return new Vector2Int(Mathf.Clamp(cellPos.x, 0, instance.colNum - 1), Mathf.Clamp(cellPos.y, ChessManager.instance.basePosition.y, ChessManager.instance.highestRow));
+    }
+    public static Vector2Int ClampInBorder(Vector2Int cellPos, Vector2Int maxBorder, Vector2Int minBorder)
+    {
+        return new Vector2Int(Mathf.Clamp(cellPos.x, minBorder.x, maxBorder.x), Mathf.Clamp(cellPos.y, minBorder.y, maxBorder.y));
+    }
+    public static Vector2Int FromTargetToOneStep(Vector2Int target, Vector2Int start)
+    {
+        Vector2Int dpos = target - start;
+        if (dpos.x != 0)
+        {
+            return new(dpos.x / Mathf.Abs(dpos.x), 0);
+        }else if (dpos.y != 0)
+        {
+            return new(0, dpos.y / Mathf.Abs(dpos.y));
+        }
+        else
+        {
+            return new(0, 0);
+        }
     }
 }

@@ -19,27 +19,34 @@ public abstract class MovableEnemy : Chess
     }
 
     internal Vector2Int moveTarget;
-    bool isAttackState = true;
+    internal bool isAttackPhase = true;
+    public int attackPower = 1;
     private void Start()
     {
         camp = 1;
         canBeRiden = true;
-        moveDuration = 0.1f;
     }
     public override void Act()
     {
         if (frozenTurns > 0)
         {
-            frozenTurns--;
-        }
-        if(frozenTurns != 0)
-        {
             isActing = false;
+            if (isAttackPhase)
+            {
+                ice.enabled = true;
+                frozenTurns--;
+                isAttackPhase = false;
+            }
+            else
+            {
+                isAttackPhase = true;
+            }
             return;
         }
-        if (isAttackState)
+        ice.enabled = false;
+        if (isAttackPhase)
         {
-            isAttackState = false;
+            isAttackPhase = false;
             Vector2Int attackTarget = new Vector2Int(x, y);
             int maxAttackPriority = 0;
             List<Vector2Int> attackRange = GetAttackRange(x, y, out int attackPriority, this);
@@ -60,12 +67,12 @@ public abstract class MovableEnemy : Chess
         }
         else
         {
-            isAttackState = true;
+            isAttackPhase = true;
             moveTarget = GetBestMoveTarget(GetMoveRange(x, y), this);
             A_Move(moveTarget.x - x, moveTarget.y - y);
         }
     }
-    Vector2Int GetBestMoveTarget(List<Vector2Int> moveRange, Chess thisChess)
+    public virtual Vector2Int GetBestMoveTarget(List<Vector2Int> moveRange, Chess thisChess)
     {
         Vector2Int bestTarget = new Vector2Int(x, y);
         int maxAttackPriority = 0;
@@ -99,12 +106,41 @@ public abstract class MovableEnemy : Chess
             StartCoroutine(Move(dx, dy));
         }
     }
-    IEnumerator Attack(int x,int y)
+    public virtual IEnumerator Attack(int x,int y)
     {
         Chess targetChess = ChessBoard.GetChess(new Vector2Int(x, y));
-        targetChess.TakeDamage(1, this, new Vector2Int(x - this.x, y - this.y));
+        targetChess.TakeDamage(attackPower, this, new Vector2Int(x - this.x, y - this.y));
         isActing = false;
         yield break;
+    }
+
+    public virtual void ChessBoardMove(int dx, int dy)
+    {
+        if (ChessBoard.instance[y, x] == this)
+            ChessBoard.instance[y, x] = null;
+        x += dx;
+        y += dy;
+        ChessBoard.instance[y, x] = this;
+    }
+
+    public override void ForcedMove()
+    {
+        if (!canMove)
+        {
+            isActing = false;
+            return;
+        }
+        ChessManager.instance.PushActingChess(this);
+        Vector2Int forcedMoveTarget = GetForcedMoveTarget();
+        if (forcedMoveTarget.x != x || forcedMoveTarget.y != y)
+        {
+            ChessBoardMove(forcedMoveTarget.x - x, forcedMoveTarget.y - y);
+            StartCoroutine(ForcedMovingCoroutine(forcedMoveTarget));
+        }
+        else
+        {
+            isActing = false;
+        }
     }
 
     IEnumerator Move(int dx, int dy)
@@ -112,10 +148,7 @@ public abstract class MovableEnemy : Chess
         Vector3 startPosition = transform.position;
         Vector3 endPosition = transform.position + new Vector3(dx, dy, 0);
         Chess target = ChessBoard.instance[y + dy, x + dx];
-        if (ChessBoard.instance[y, x] == this)
-            ChessBoard.instance[y, x] = null;
-        x += dx;
-        y += dy;
+        ChessBoardMove(dx, dy);
         for(float t = 0; t < moveDuration; t += Time.deltaTime)
         {
             while (StageManager.isPaused) // ¿ÉÔÝÍ£
@@ -124,7 +157,6 @@ public abstract class MovableEnemy : Chess
             yield return null;
         }
         transform.position = endPosition;
-        ChessBoard.instance[y, x] = this;
         isActing = false;
         yield break;
     }
